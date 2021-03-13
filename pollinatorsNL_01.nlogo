@@ -117,10 +117,10 @@ to setup-pollinators
 
   create-pollinators 10 [
     set species "hoverfly"
-     set size 3
-   set color black
-  set energy 150
-  set mean-step-length 2
+    set size 3
+    set color black
+    set energy 150
+    set mean-step-length 2
     set euse 0
     setxy random-pxcor random-pycor
   ]
@@ -138,10 +138,10 @@ to patch-flowering
   ask patches [
      (ifelse
       pcolor = magenta [
-        seasonal-probabilistc-flowering
+         ;print  seasonal-probabilistc-flowering 200
       ]
       pcolor = yellow [
-        seasonal-probabilistc-flowering
+         ;print  seasonal-probabilistc-flowering 100
         ]
      )
   ]
@@ -149,16 +149,13 @@ to patch-flowering
 end
 
 
-to seasonal-probabilistc-flowering
+to-report seasonal-probabilistc-flowering [delay]
 
-  let dayofyear ticks mod 365
   ;let alpha     mean-day * mean-day / variance-pol
   ;let lambda    1 / (variance / mean)
 
   ; Amplitud ( 1 + cos ( tiempo 2 180 / periodo ) )
-  ;report (0.5 * (1 + cos ( ticks * 2 * 180 / periodo-ambiente ) ))
-
-  ;; gamma-distribution
+  report (0.5 * (1 + cos ( ( ticks - delay ) * 180 / periodo-ambient ) ))
 
 end
 
@@ -425,20 +422,22 @@ HORIZONTAL
 PLOT
 892
 262
-1092
-412
-plot 1
+1238
+511
+Test Cosine reporter for probability of flowering
 NIL
 NIL
 0.0
-10.0
+360.0
 0.0
 1.0
 true
 false
 "" ""
 PENS
-"default" 1.0 0 -16777216 true "" "plot (0.5 * (1 + cos ( ticks *  180 / periodo-ambient ) ))"
+"default" 1.0 0 -16777216 true "" "plot seasonal-probabilistc-flowering 0"
+"pen-1" 1.0 0 -7500403 true "" "plot seasonal-probabilistc-flowering 100"
+"pen-2" 1.0 0 -2674135 true "" "plot seasonal-probabilistc-flowering 240"
 
 @#$#@#$#@
 ## WHAT IS IT?
