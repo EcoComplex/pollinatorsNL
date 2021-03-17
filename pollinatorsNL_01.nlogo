@@ -12,16 +12,16 @@ pollinators-own [
   energy
   mean-step-length ;
   euse
-  real_x
-  real_y
+  ;real_x
+  ;real_y
 ]
 
 ;patches are plants
 ;patch variables
 patches-own [
   plant-density
-  patch.visited? ; true or false statement to record visits to colored patches i.e. plants
   number-of-visits
+  patch.visited?
   is-flowering
 ]
 
@@ -34,13 +34,15 @@ to setup
   if (file-exists? "output.txt") ;delete previous file
   [
     carefully
-    [file-delete "output.txt"]
+    [
+      file-close
+      file-delete "output.txt"
+    ]
     [print error-message]
   ]
 
   file-open "output.txt"
-  file-type "species.id;"
-  file-print "flower.color;"
+  file-print ( word "species.id; flower.color")
 
 end
 
@@ -49,17 +51,18 @@ end
 ; homogenous landscape --> the four plants are seggregtaed but randomly dispersed within their area
 to setup-patches
 
-    if landscape = "heterogenous" [
+
+  if landscape = "heterogenous" [
 
     set plant-number 100 ; ( 61 * 61 ) / 9 ; to make a proportion of the patches a plant
 
-  ask patches [set pcolor white]
+    ask patches [set pcolor white]
 
     ask n-of plant-number patches [
       ;set plant-density random-float 1
       ;set pcolor scale-color one-of [ green magenta yellow orange ] plant-density 0 1
       set pcolor one-of [ green magenta yellow orange ]
-  ]
+    ]
   ]
 
   if landscape = "homogenous" [
@@ -73,17 +76,17 @@ to setup-patches
       ;set pcolor scale-color green plant-density 0 1]
       set pcolor green ]
 
-ask n-of plant-number patches with [pxcor < 0 and pxcor  > -60 and pycor < 60 and pycor > 0]
+    ask n-of plant-number patches with [pxcor < 0 and pxcor  > -60 and pycor < 60 and pycor > 0]
     [ ;set plant-density random-float 1
       ;set pcolor scale-color magenta plant-density 0 1]
       set pcolor magenta ]
 
-ask n-of plant-number patches with [pxcor < 0 and pxcor  > -60 and pycor < 0 and pycor > -60]
+    ask n-of plant-number patches with [pxcor < 0 and pxcor  > -60 and pycor < 0 and pycor > -60]
     [  ;set plant-density random-float 1
        ;set pcolor scale-color yellow plant-density 0 1]
       set pcolor yellow ]
 
- ask n-of plant-number patches with [pxcor < 60 and pxcor  > 0 and pycor < 60 and pycor > 0]
+    ask n-of plant-number patches with [pxcor < 60 and pxcor  > 0 and pycor < 60 and pycor > 0]
     [  ;set plant-density random-float 1
        ;set pcolor scale-color orange plant-density 0 1]
       set pcolor orange ]
@@ -126,33 +129,50 @@ to setup-pollinators
   ]
 end
 
- to go
-  move-pollinators
-  death
-  patch-flowering
+to go
+
+  if not any? pollinators or ticks = 500 [
+    file-close
+    stop
+  ]
+
+  ask pollinators [
+
+    move-pollinators
+    eat
+    death
+  ]
+
+  ask patches [
+
+    patch-flowering
+
+  ]
+
 
   tick
+
 end
 
 to patch-flowering
-  ask patches [
-     (ifelse
+
+  (ifelse
       pcolor = magenta [
          ;print  seasonal-probabilistc-flowering 200
       ]
       pcolor = yellow [
          ;print  seasonal-probabilistc-flowering 100
         ]
-     )
-  ]
+  )
 
 end
 
-
+; Function to report a probability of flowering
+; periodo-ambient is the length of period
+;
+; delay is the time of the peak
+;
 to-report seasonal-probabilistc-flowering [delay]
-
-  ;let alpha     mean-day * mean-day / variance-pol
-  ;let lambda    1 / (variance / mean)
 
   ; Amplitud ( 1 + cos ( tiempo 2 180 / periodo ) )
   report (0.5 * (1 + cos ( ( ticks - delay ) * 180 / periodo-ambient ) ))
@@ -163,92 +183,76 @@ end
 ; empirically derived turning angles of pollinators (for bumblebee and bees)
 ; hoverflies move randomly
 to move-pollinators
-  ;file-open "output.txt"
 
-  ask pollinators with [species = "bumblebee"]  [
-    move-bumblebee
-    eat
-    count-visits
-  ]
 
-  ask pollinators with [species = "bee"]  [
+  ; Set turning angle
+  ;
+  (ifelse
+    species = "bumblebee"  [ turn-bumblebee   ]
+    species = "bee"        [ turn-bee         ]
+    species = "hoverfly"   [ turn-hoverfly    ]
+  )
+  ; Exponential is equivalent to normal centered in 0
+  ;
+  let step-length random-exponential mean-step-length ; rate ;
 
-   let turn 0
-   let randBar random 214 + 1 ; turning angles randomly chosen from empirical turning angle histogram with a total of 214 turning angles (derived from Becher et al 2016))
-   if randBar >= 1 and randBar < 24 [ set turn 0 + random-float 10 ] ; random-float prints a number at least 0 but less than 19
-   if randBar >= 24 and randBar < 36 [ set turn 10 + random-float 10 ]
-   if randBar >= 36 and randBar < 45 [ set turn 20 + random-float 10 ]
-   if randBar >= 45 and randBar < 58 [ set turn 30 + random-float 10 ]
-   if randBar >= 58 and randBar < 73 [ set turn 40 + random-float 10  ]
-   if randBar >= 73 and randBar < 81 [ set turn 50 + random-float 10 ]
-   if randBar >= 81 and randBar < 86 [ set turn 60 + random-float 10 ]
-   if randBar >= 86 and randBar < 97 [ set turn 70 + random-float 10 ]
-   if randBar >= 97 and randBar < 107 [ set turn 80 + random-float 10 ]
-   if randBar >= 107 and randBar < 112 [ set turn 90 + random-float 10 ]
-   if randBar >= 112 and randBar < 124 [ set turn 100 + random-float 10 ]
-   if randBar >= 124 and randBar < 133 [ set turn 110 + random-float 10 ]
-   if randBar >= 133 and randBar < 143 [ set turn 120 + random-float 10 ]
-   if randBar >= 143 and randBar < 154 [ set turn 130 + random-float 10 ]
-   if randBar >= 154 and randBar < 166 [ set turn 140 + random-float 10 ]
-   if randBar >= 166 and randBar < 178 [ set turn 150 + random-float 10 ]
-   if randBar >= 178 and randBar < 192 [ set turn 160 + random-float 10 ]
-   if randBar >= 192 and randBar <= 214 [ set turn 170 + random-float 10 ]
+  ;
+  ; Calculating the total traveled distance
+  ; Why we need to calculate this total distance????????????????????????????????
+  ;
+  ;set real_x real_x + (dx * step-length)
+  ;set real_y real_y + (dy * step-length)
+  fd step-length
 
- if random-float 1 > 0.5 [ set turn turn * -1 ]
- rt turn ;this applies correlated direction instead of fully random degree angle, based on empirical data for turn angles
- ;rt random-normal 0 stdev-angle ; this option would activate the slider for turn angle, and apply correlated direction
+  ;
+  ; energy lost by movement
+  ;
+  set euse step-length
+  set energy (energy - euse)
 
-      let step-length abs random-normal 0 mean-step-length
-      set real_x real_x + (dx * step-length)
-      set real_y real_y + (dy * step-length)
-      set euse step-length
-      fd step-length
-      set energy (energy - euse)
-
-    eat
-
-      if pcolor != white [ set patch.visited? TRUE ]
-
-  file-type (word species ";")
-  file-print (word pcolor ";")
-  ]
-
-;hoverlfies move randomly in "exponentially distributed step length"
-     ask pollinators with [species = "hoverfly"]  [
-    set heading random-float 360
-      let step-length random-exponential mean-step-length ; rate ;
-      set real_x real_x + (dx * step-length)
-      set real_y real_y + (dy * step-length)
-     set euse step-length
-      fd step-length
-    set energy (energy - euse)
-
-    eat
-
-    if pcolor != white [ set patch.visited? TRUE ]
-
- File-type (word species ";")
- file-print (word pcolor ";")
-    ]
-
- ;file-close
 end
 
 to count-visits
-    if pcolor != white [
-      set patch.visited? TRUE
-      set number-of-visits number-of-visits + 1
-      ;;
-      ;; File recording visits
-      ;;
-      file-type (word species ";")
-      file-print (word pcolor ";")
-  ]
+    set patch.visited? TRUE
+    set number-of-visits number-of-visits + 1
+    ;;
+    ;; File recording visits
+    ;;
+    file-print (word species ";" pcolor )
+    ;;print (word species ";" pcolor )
 end
 
-
 ;; Pollinators procedure
-to move-bumblebee
+to turn-bee
+    let turn 0
+    let randBar random 214 + 1 ; turning angles randomly chosen from empirical turning angle histogram with a total of 214 turning angles (derived from Becher et al 2016))
+    if randBar >= 1 and randBar < 24 [ set turn 0 + random-float 10 ] ; random-float prints a number at least 0 but less than 19
+    if randBar >= 24 and randBar < 36 [ set turn 10 + random-float 10 ]
+    if randBar >= 36 and randBar < 45 [ set turn 20 + random-float 10 ]
+    if randBar >= 45 and randBar < 58 [ set turn 30 + random-float 10 ]
+    if randBar >= 58 and randBar < 73 [ set turn 40 + random-float 10  ]
+    if randBar >= 73 and randBar < 81 [ set turn 50 + random-float 10 ]
+    if randBar >= 81 and randBar < 86 [ set turn 60 + random-float 10 ]
+    if randBar >= 86 and randBar < 97 [ set turn 70 + random-float 10 ]
+    if randBar >= 97 and randBar < 107 [ set turn 80 + random-float 10 ]
+    if randBar >= 107 and randBar < 112 [ set turn 90 + random-float 10 ]
+    if randBar >= 112 and randBar < 124 [ set turn 100 + random-float 10 ]
+    if randBar >= 124 and randBar < 133 [ set turn 110 + random-float 10 ]
+    if randBar >= 133 and randBar < 143 [ set turn 120 + random-float 10 ]
+    if randBar >= 143 and randBar < 154 [ set turn 130 + random-float 10 ]
+    if randBar >= 154 and randBar < 166 [ set turn 140 + random-float 10 ]
+    if randBar >= 166 and randBar < 178 [ set turn 150 + random-float 10 ]
+    if randBar >= 178 and randBar < 192 [ set turn 160 + random-float 10 ]
+    if randBar >= 192 and randBar <= 214 [ set turn 170 + random-float 10 ]
+
+    if random-float 1 > 0.5 [ set turn turn * -1 ]
+    rt turn ;this applies correlated direction instead of fully random degree angle, based on empirical data for turn angles
+            ;rt random-normal 0 stdev-angle ; this option would activate the slider for turn angle, and apply correlated direction
+    ;set step-length abs random-normal 0 mean-step-length
+
+end
+;; Pollinators procedure
+to turn-bumblebee
     let turn 0
     let randBar random 628 + 1 ; randomly chosen bar from the empirical turning angle histogram with a total of 628 turning angles (returns random number between [1..628]
    ; 18 bars, each 10 degrees, assuming symmetry of turning right and left  (derived from harmonic radar dataset Emma Wright (PhD thesis))
@@ -276,33 +280,31 @@ to move-bumblebee
     rt turn ;this applies correlated direction instead of fully random degree angle, based on empirical data for turn angles
             ;rt random-normal 0 stdev-angle ; this option would activate the slider for turn angle, and apply correlated direction
 
-    let step-length abs random-normal 0 mean-step-length
-    set real_x real_x + (dx * step-length)
-    set real_y real_y + (dy * step-length)
-    set euse step-length
-    fd step-length
-    set energy (energy - euse)
-
 end
 
-;; sheep procedure, sheep eat grass
+to turn-hoverfly
+
+  set heading random-float 360
+end
+
+; pollinator's procedure
+;
 to eat
-  ;; check to make sure there is grass here
+  if pcolor != white [
+
+    count-visits
+
     set energy energy + 1 ; adds the energy gain from flower nectar/pollen consumption
+  ]
 end
 
 
 ; pollinators die after running out of fuel=energy
-to death     ; the bees die if they run out of energy
-  ask turtles [
+;
+to death
     if ( energy < 0 ) [ die ]
-      ]
 end
 
-;; update the plots in the interface tab
-to my-update-plots
-  plot count pollinators
-end
 @#$#@#$#@
 GRAPHICS-WINDOW
 210
@@ -373,7 +375,7 @@ CHOOSER
 landscape
 landscape
 "heterogenous" "homogenous"
-0
+1
 
 MONITOR
 25
