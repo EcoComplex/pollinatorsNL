@@ -1,7 +1,7 @@
 ;plant-pollinator interaction simulation by Susanne Kortsch
 ;last edited 09.03.2021
 
-globals [ plant-number ]
+globals [ ]
 
 breed [ pollinators pollinator ]
 ;breed [flowers flower] ;consider making flowers a breed
@@ -12,17 +12,18 @@ pollinators-own [
   energy
   mean-step-length ;
   euse
-  ;real_x
-  ;real_y
+  stdev-angle      ; Correlated random walk
 ]
 
 ;patches are plants
 ;patch variables
 patches-own [
-  plant-density
   number-of-visits
-  patch.visited?
-  is-flowering
+  is-flowering         ;; Is the plant flowering TRUE/FALSE
+  end-flowering        ;; flowering ended
+  flower-density       ;; More density more attractive to pollinatiors a proxy of energy available
+  delay                ;; peak of flowering
+  flower-color         ;; color of flowering to display
 ]
 
 to setup
@@ -51,45 +52,73 @@ end
 ; homogenous landscape --> the four plants are seggregtaed but randomly dispersed within their area
 to setup-patches
 
+; First setup the species = flower-color then add patch variables values
 
   if landscape = "heterogenous" [
-
-    set plant-number 100 ; ( 61 * 61 ) / 9 ; to make a proportion of the patches a plant
-
-    ask patches [set pcolor white]
 
     ask n-of plant-number patches [
       ;set plant-density random-float 1
       ;set pcolor scale-color one-of [ green magenta yellow orange ] plant-density 0 1
-      set pcolor one-of [ green magenta yellow orange ]
+      set flower-color one-of [ green magenta yellow orange ]
     ]
   ]
 
   if landscape = "homogenous" [
 
-    ask patches [set pcolor white]
+    ;set plant-number 100 / 4 ;(( 60 * 60 ) / 9) / 4 ; to make a proportion of the patches a plant
 
-    set plant-number 100 / 4 ;(( 60 * 60 ) / 9) / 4 ; to make a proportion of the patches a plant
+    ask n-of (plant-number / 4) patches with [pxcor < 60 and pxcor > 0 and pycor < 0 and pycor > -60]
+    [
+      set flower-color green
+    ]
 
-    ask n-of plant-number patches with [pxcor < 60 and pxcor > 0 and pycor < 0 and pycor > -60]
-    [ ;set plant-density random-float 1
-      ;set pcolor scale-color green plant-density 0 1]
-      set pcolor green ]
+    ask n-of (plant-number / 4) patches with [pxcor < 0 and pxcor  > -60 and pycor < 60 and pycor > 0]
+    [
+      set flower-color magenta
+    ]
 
-    ask n-of plant-number patches with [pxcor < 0 and pxcor  > -60 and pycor < 60 and pycor > 0]
-    [ ;set plant-density random-float 1
-      ;set pcolor scale-color magenta plant-density 0 1]
-      set pcolor magenta ]
+    ask n-of (plant-number / 4)  patches with [pxcor < 0 and pxcor  > -60 and pycor < 0 and pycor > -60]
+    [
+      set flower-color yellow
+    ]
 
-    ask n-of plant-number patches with [pxcor < 0 and pxcor  > -60 and pycor < 0 and pycor > -60]
-    [  ;set plant-density random-float 1
-       ;set pcolor scale-color yellow plant-density 0 1]
-      set pcolor yellow ]
+    ask n-of (plant-number / 4) patches with [pxcor < 60 and pxcor  > 0 and pycor < 60 and pycor > 0]
+    [
+      set flower-color orange
+    ]
+  ]
 
-    ask n-of plant-number patches with [pxcor < 60 and pxcor  > 0 and pycor < 60 and pycor > 0]
-    [  ;set plant-density random-float 1
-       ;set pcolor scale-color orange plant-density 0 1]
-      set pcolor orange ]
+  ask patches [
+    set pcolor white
+    set is-flowering FALSE
+    set end-flowering FALSE
+
+    (ifelse
+      flower-color = green
+      [
+        set delay 120
+        set pcolor grey
+        set flower-density random-float 500
+      ]
+      flower-color = magenta
+      [
+        set delay 160
+        set pcolor grey
+        set flower-density random-float 300
+      ]
+      flower-color = yellow
+      [
+        set delay 190
+        set pcolor grey
+        set flower-density random-float 200
+      ]
+      flower-color = orange
+      [
+        set delay 220
+        set pcolor grey
+        set flower-density random-float 200
+      ]
+    )
   ]
 
 end
@@ -102,8 +131,8 @@ to setup-pollinators
     set species "bumblebee"
     set size 4
     set color violet
-    set energy 300
-    set mean-step-length 2
+   set energy 300
+    set mean-step-length 3
     set euse 0
     setxy random-pxcor random-pycor
   ]
@@ -116,6 +145,7 @@ to setup-pollinators
     set mean-step-length 2
     set euse 0
     setxy random-pxcor random-pycor
+    pendown
   ]
 
   create-pollinators 10 [
@@ -123,9 +153,12 @@ to setup-pollinators
     set size 3
     set color black
     set energy 150
-    set mean-step-length 2
+    set mean-step-length 1
     set euse 0
     setxy random-pxcor random-pycor
+  ]
+  ask pollinators [
+    set stdev-angle 60
   ]
 end
 
@@ -143,7 +176,7 @@ to go
     death
   ]
 
-  ask patches [
+  ask patches with [pcolor != white] [
 
     patch-flowering
 
@@ -155,16 +188,21 @@ to go
 end
 
 to patch-flowering
+  let pflowering seasonal-probabilistc-flowering delay
+  if pflowering > 0.8 and is-flowering = FALSE [
+    set is-flowering TRUE
+    set pcolor flower-color
+    ;show (word "START FLOWERING pflowering: " pflowering " Is Flowering " is-flowering " color " pcolor )
+  ]
+  if flower-density <= 10 and end-flowering = FALSE [
 
-  (ifelse
-      pcolor = magenta [
-         ;print  seasonal-probabilistc-flowering 200
-      ]
-      pcolor = yellow [
-         ;print  seasonal-probabilistc-flowering 100
-        ]
-  )
+    ;show (word "END FLOWERING Densitty: " flower-density " Is Flowering " is-flowering " color " pcolor )
+    set pcolor grey
+    ;set is-flowering FALSE   ; If I set it to FALSE I allow multiple flowerting events
+    set end-flowering TRUE
+    set flower-density 0
 
+  ]
 end
 
 ; Function to report a probability of flowering
@@ -172,10 +210,10 @@ end
 ;
 ; delay is the time of the peak
 ;
-to-report seasonal-probabilistc-flowering [delay]
+to-report seasonal-probabilistc-flowering [peak-delay]
 
   ; Amplitud ( 1 + cos ( tiempo 2 180 / periodo ) )
-  report (0.5 * (1 + cos ( ( ticks - delay ) * 180 / periodo-ambient ) ))
+  report (0.5 * (1 + cos ( ( ticks - peak-delay ) * 180 / ambient-period ) ))
 
 end
 
@@ -196,24 +234,20 @@ to move-pollinators
   ;
   let step-length random-exponential mean-step-length ; rate ;
 
+  ; Distance travelled
   ;
-  ; Calculating the total traveled distance
-  ; Why we need to calculate this total distance????????????????????????????????
-  ;
-  ;set real_x real_x + (dx * step-length)
-  ;set real_y real_y + (dy * step-length)
   fd step-length
 
   ;
   ; energy lost by movement
   ;
-  set euse step-length
+  set euse step-length * 0.1
   set energy (energy - euse)
 
 end
 
 to count-visits
-    set patch.visited? TRUE
+    ;set patch.visited? TRUE
     set number-of-visits number-of-visits + 1
     ;;
     ;; File recording visits
@@ -224,61 +258,12 @@ end
 
 ;; Pollinators procedure
 to turn-bee
-    let turn 0
-    let randBar random 214 + 1 ; turning angles randomly chosen from empirical turning angle histogram with a total of 214 turning angles (derived from Becher et al 2016))
-    if randBar >= 1 and randBar < 24 [ set turn 0 + random-float 10 ] ; random-float prints a number at least 0 but less than 19
-    if randBar >= 24 and randBar < 36 [ set turn 10 + random-float 10 ]
-    if randBar >= 36 and randBar < 45 [ set turn 20 + random-float 10 ]
-    if randBar >= 45 and randBar < 58 [ set turn 30 + random-float 10 ]
-    if randBar >= 58 and randBar < 73 [ set turn 40 + random-float 10  ]
-    if randBar >= 73 and randBar < 81 [ set turn 50 + random-float 10 ]
-    if randBar >= 81 and randBar < 86 [ set turn 60 + random-float 10 ]
-    if randBar >= 86 and randBar < 97 [ set turn 70 + random-float 10 ]
-    if randBar >= 97 and randBar < 107 [ set turn 80 + random-float 10 ]
-    if randBar >= 107 and randBar < 112 [ set turn 90 + random-float 10 ]
-    if randBar >= 112 and randBar < 124 [ set turn 100 + random-float 10 ]
-    if randBar >= 124 and randBar < 133 [ set turn 110 + random-float 10 ]
-    if randBar >= 133 and randBar < 143 [ set turn 120 + random-float 10 ]
-    if randBar >= 143 and randBar < 154 [ set turn 130 + random-float 10 ]
-    if randBar >= 154 and randBar < 166 [ set turn 140 + random-float 10 ]
-    if randBar >= 166 and randBar < 178 [ set turn 150 + random-float 10 ]
-    if randBar >= 178 and randBar < 192 [ set turn 160 + random-float 10 ]
-    if randBar >= 192 and randBar <= 214 [ set turn 170 + random-float 10 ]
-
-    if random-float 1 > 0.5 [ set turn turn * -1 ]
-    rt turn ;this applies correlated direction instead of fully random degree angle, based on empirical data for turn angles
-            ;rt random-normal 0 stdev-angle ; this option would activate the slider for turn angle, and apply correlated direction
-    ;set step-length abs random-normal 0 mean-step-length
-
+  rt random-normal 0 stdev-angle ; this option would activate the slider for turn angle, and apply correlated direction
+                                 ;this applies correlated direction instead of fully random degree angle, based on empirical data for turn angles
 end
 ;; Pollinators procedure
 to turn-bumblebee
-    let turn 0
-    let randBar random 628 + 1 ; randomly chosen bar from the empirical turning angle histogram with a total of 628 turning angles (returns random number between [1..628]
-   ; 18 bars, each 10 degrees, assuming symmetry of turning right and left  (derived from harmonic radar dataset Emma Wright (PhD thesis))
 
-    if randBar >= 1 and randBar < 92 [ set turn 0 + random-float 10 ]
-    if randBar >= 92 and randBar < 144 [ set turn 10 + random-float 10 ]
-    if randBar >= 144 and randBar < 206 [ set turn 20 + random-float 10 ]
-    if randBar >= 206 and randBar < 262 [ set turn 30 + random-float 10 ]
-    if randBar >= 262 and randBar < 302 [ set turn 40 + random-float 10 ]
-    if randBar >= 302 and randBar < 343 [ set turn 50 + random-float 10 ]
-    if randBar >= 343 and randBar < 363 [ set turn 60 + random-float 10 ]
-    if randBar >= 363 and randBar < 396 [ set turn 70 + random-float 10 ]
-    if randBar >= 396 and randBar < 419 [ set turn 80 + random-float 10 ]
-    if randBar >= 419 and randBar < 440 [ set turn 90 + random-float 10 ]
-    if randBar >= 440 and randBar < 456 [ set turn 100 + random-float 10 ]
-    if randBar >= 456 and randBar < 483 [ set turn 110 + random-float 10 ]
-    if randBar >= 483 and randBar < 506 [ set turn 120 + random-float 10 ]
-    if randBar >= 506 and randBar < 526 [ set turn 130 + random-float 10 ]
-    if randBar >= 526 and randBar < 542 [ set turn 140 + random-float 10 ]
-    if randBar >= 542 and randBar < 570 [ set turn 150 + random-float 10 ]
-    if randBar >= 570 and randBar < 599 [ set turn 160 + random-float 10 ]
-    if randBar >= 599 and randBar <= 628 [ set turn 170 + random-float 10 ]
-
-    if random-float 1 > 0.5 [ set turn turn * -1 ]
-    rt turn ;this applies correlated direction instead of fully random degree angle, based on empirical data for turn angles
-            ;rt random-normal 0 stdev-angle ; this option would activate the slider for turn angle, and apply correlated direction
 
 end
 
@@ -290,11 +275,14 @@ end
 ; pollinator's procedure
 ;
 to eat
-  if pcolor != white [
+  if is-flowering = TRUE [
 
-    count-visits
-
-    set energy energy + 1 ; adds the energy gain from flower nectar/pollen consumption
+    if  flower-density >= 10  [
+      count-visits
+      set energy energy + 1                    ; adds the energy gain from flower nectar/pollen consumption
+      set flower-density flower-density - 10   ; less energy in the plant
+      ;show (word "flower-density: " flower-density " Is Flowering color " pcolor )
+    ]
   ]
 end
 
@@ -304,7 +292,6 @@ end
 to death
     if ( energy < 0 ) [ die ]
 end
-
 @#$#@#$#@
 GRAPHICS-WINDOW
 210
@@ -383,8 +370,8 @@ MONITOR
 143
 188
 Total flower visited
-count patches with [patch.visited? = TRUE]
-17
+count patches with [number-of-visits > 1]
+4
 1
 11
 
@@ -411,8 +398,8 @@ SLIDER
 261
 193
 294
-periodo-ambient
-periodo-ambient
+ambient-period
+ambient-period
 0
 180
 180.0
@@ -440,6 +427,21 @@ PENS
 "default" 1.0 0 -16777216 true "" "plot seasonal-probabilistc-flowering 0"
 "pen-1" 1.0 0 -7500403 true "" "plot seasonal-probabilistc-flowering 100"
 "pen-2" 1.0 0 -2674135 true "" "plot seasonal-probabilistc-flowering 240"
+
+SLIDER
+21
+306
+193
+339
+plant-number
+plant-number
+0
+10000
+320.0
+10
+1
+NIL
+HORIZONTAL
 
 @#$#@#$#@
 ## WHAT IS IT?
