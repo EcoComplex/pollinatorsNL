@@ -131,7 +131,7 @@ to setup-pollinators
     set species "bumblebee"
     set size 4
     set color violet
-   set energy 300
+    set energy 300
     set mean-step-length 3
     set euse 0
     setxy random-pxcor random-pycor
@@ -145,7 +145,7 @@ to setup-pollinators
     set mean-step-length 2
     set euse 0
     setxy random-pxcor random-pycor
-    pendown
+    ;pendown
   ]
 
   create-pollinators 10 [
@@ -362,7 +362,7 @@ CHOOSER
 landscape
 landscape
 "heterogenous" "homogenous"
-1
+0
 
 MONITOR
 25
