@@ -1,0 +1,17 @@
+﻿plant,color.name,color.id,habitat,no.of.flowers,no.of.flowers_max
+plant_1,"""gray""",5,[1 2 3 4],4,16
+plant_2,"""red""",15,[1 2 3 4],4,16
+plant_3,"""orange""",25,[1 2 3 4],4,16
+plant_4,"""brown""",35,[1 2 3 4],4,16
+plant_5,"""yellow""",45,[1 2 3],8,16
+plant_6,"""green""",55,[1 2 3],8,16
+plant_7,"""lime""",65,[2 3 4],8,16
+plant_8,"""turquoise""",75,[2 3 4],8,16
+plant_9,"""cyan""",85,[1 2 4],8,16
+plant_10,"""sky""",95,[1 2 4],8,16
+plant_11,"""blue""",105,[1 2],12,16
+plant_12,"""violet""",115,[2 3],12,16
+plant_13,"""magenta""",125,[3 4],12,16
+plant_14,"""pink""",135,[2 4],12,16
+plant_15,"""rose""",139, [5],16,16
+plant_16,"""black""",0,[6],16,16
