@@ -26,7 +26,7 @@ patches-own[
 pollinators-own [
   species
   flight_speed
-  foraging_range
+  foraging_min
   foraging_max
   degree
   degree_max
@@ -66,7 +66,8 @@ to setup-landscape_1
         ;print (word "region number " region-number " boundaries " boundaries)
         set region region-numberx +  ( region-numbery - 1 ) * number-of-regions
 
-        set pcolor palette:scale-gradient [[255 255 0] [0 0 255]] region 1 (number-of-regions * number-of-regions)
+        ;set pcolor palette:scale-gradient [[255 255 0] [0 0 255]] region 1 (number-of-regions * number-of-regions)
+        set pcolor 3 + 10 * region
         ;set pcolor 5 + ( (region-numberx * region-numbery) - 1 )* 10
 
         ; (ifelse
@@ -128,7 +129,7 @@ end
 ;;; LANDSCAPE 2
 to setup-landscape_2
   clear-all
-  make-landscape_2_scenarios
+  ;make-landscape_2_scenarios
 
   let dim 100
   let ext dim ^ 2
@@ -213,10 +214,9 @@ to setup-landscape_3
  reset-ticks
 end
 
-;;;;;;;;;;;;;;;;
-
-; SETUP TURTLES AND TURLE PROCEDURES
-; procedure to read some turtle properties from a file
+;
+; procedure to read pollinators parameters from a file
+;
 to setup-pollinators
   reset-ticks
   ;clear-plot
@@ -224,29 +224,33 @@ to setup-pollinators
   set-default-shape pollinators "bug" ; tried "bee 2" shape but does not work, why?
   file-close-all ; close all open files
   if not file-exists? "pollinator_parameters.csv" [
-    user-message "No file 'pollinator_parameters.csv' exists! Try pressing WRITE-TURTLES-TO-CSV."
+    user-message "No file 'pollinator_parameters.csv' exists!"
     stop
   ]
   file-open "pollinator_parameters.csv" ; open the file with the turtle data
+
   ;; To skip the header row in the while loop,
   ;  read the header row here to move the cursor down to the next line.
   let headings csv:from-row file-read-line
+
   ; We'll read all the data in a single loop
   while [ not file-at-end? ] [
+
     ; here the CSV extension grabs a single line and puts the read data in a list
     let pollinator_data csv:from-row file-read-line
-    ;set pollinator_data word pollinator_data ";"  ; add semicolon for loop termination
+
     print pollinator_data
+
     ; now we can use that list to create a turtle with the saved properties
     create-pollinators number-of-pollinators [
       setxy random-pxcor random-pycor
       set species        item 0 pollinator_data
-      set flight_speed   item 1 pollinator_data
-      set foraging_range item 2 pollinator_data
+      set flight_speed   item 1 pollinator_data         ; Seems that this parameter is not needed because the range determines the speed
+      set foraging_min   item 2 pollinator_data
       set foraging_max   item 3 pollinator_data
-      set degree         item 4 pollinator_data
+      set degree         item 4 pollinator_data         ; Min degree?????????????
       set degree_max     item 5 pollinator_data
-      set energy         item 6 pollinator_data
+      set energy         item 6 pollinator_data         ; Basal energy to start, metabolism is based on alometry ???
       set body_mass      item 7 pollinator_data
       set size           item 8 pollinator_data
       set color          item 9 pollinator_data
@@ -473,7 +477,7 @@ seed-percent
 seed-percent
 0.001
 0.02
-0.003
+0.02
 0.001
 1
 NIL
@@ -488,7 +492,7 @@ land-cover-classes
 land-cover-classes
 1
 12
-4.0
+3.0
 1
 1
 NIL
@@ -544,7 +548,7 @@ CHOOSER
 landscape_2_scenarios
 landscape_2_scenarios
 "fragmented" "intermediate-complexity" "homogenous"
-1
+2
 
 BUTTON
 229
