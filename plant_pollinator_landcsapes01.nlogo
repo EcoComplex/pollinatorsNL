@@ -7,75 +7,66 @@ globals [
 ]
 
 breed [ pollinators pollinator ]
-;breed [ plants plant ]
 
 ;patches are plants
 ;patch variables
 patches-own[
-  plant.id
   number-of-visits
-  region
-  cluster
-  flower-density       ;; More density more attractive to pollinatiors a proxy of energy available
-  ;plant.id
-  ;no.of.flowers
-  ;no.of.flowers_max
+  habitat
+  plant_species
+  flower_density       ;; More density more attractive to pollinatiors a proxy of energy available
+
 ]
 
 ;variables characterising the pollinators
 pollinators-own [
   species
   flight_speed
-  foraging_min
-  foraging_max
-  degree
-  degree_max
-  energy
+  niche_list            ; plants that the pollinators pollinates
+  energy_by_distance
   body_mass
-  stdev-angle      ; Correlated random walk
-  euse
+  stdev_angle           ; Correlated random walk
+  energy
 ]
 
-;to setup
- ; clear-all
-  ;file-close-all ; Close any files open from last run
-  ;setup-landscape_1 ;divided into 16 or 25 areas
-  ;setup-landscape_2 ;divided into more patchy areas
-  ;read-pollinators-from-csv
-  ;setup-pollinators
-  ;reset-ticks
-;end
+
+to setup
+  clear-all
+  set-default-shape pollinators "butterfly"
+
+  (ifelse
+
+    landscape_type = "Regular"        [ setup-landscape_1 ];divided into 16 or 25 areas ]
+    landscape_type = "Random natural" [ setup-landscape_2 ]
+    landscape_type = "Image"          [ setup-landscape_3 ]
+  )
+  setup-plants
+  setup-pollinators
+  reset-ticks
+end
 
 
 ;; Generating the landscapes
 ;;; LANDSCAPE 1
 to setup-landscape_1
- clear-all
 
   ;make-landscape_1_scenarios
- ;ask patches [set pcolor white]
+  ;ask patches [set pcolor white]
   ;resize-world 0 100 0 100
 
   set region-boundaries calculate-region-boundaries number-of-regions
   ;print (word "Region boundaries " region-boundaries)
+
   let region-numbers (range 1 (number-of-regions + 1))
   (foreach region-boundaries region-numbers [ [boundariesx region-numberx] ->
     (foreach region-boundaries region-numbers [ [boundariesy region-numbery] ->
       ask patches with [ pxcor >= first boundariesx and pxcor <= last boundariesx and pycor >= first boundariesy and pycor <= last boundariesy] [
 
         ;print (word "region number " region-number " boundaries " boundaries)
-        set region region-numberx +  ( region-numbery - 1 ) * number-of-regions
+        set habitat region-numberx +  ( region-numbery - 1 ) * number-of-regions
 
-        ;set pcolor palette:scale-gradient [[255 255 0] [0 0 255]] region 1 (number-of-regions * number-of-regions)
-        set pcolor 3 + 10 * region
-        ;set pcolor 5 + ( (region-numberx * region-numbery) - 1 )* 10
-
-        ; (ifelse
-        ; landscape_1_scenarios = "fragmented-segregated" [ set pcolor
-            ;set plant-number 160 / 16  ; same amount of plants in every local area
-            ;Here I want to randomly assign the 16 colors to each local area, maybe the same a just assigning randomly to the entire landscape
-            ;set pcolor according to csv file!!!!
-
+        ;set pcolor palette:scale-gradient [[255 255 0] [0 0 255]] habitat 1 (number-of-regions * number-of-regions)
+        set pcolor 3 + 10 * habitat
 
       ]
     ])
@@ -83,7 +74,9 @@ to setup-landscape_1
 
 end
 
-
+;;
+;; Auxiliar routine for setup_landscape_1
+;;
 to-report calculate-region-boundaries [ num-regions ]
   ; The region definitions are built from the region divisions:
   let divisions region-divisions num-regions
@@ -94,6 +87,9 @@ to-report calculate-region-boundaries [ num-regions ]
   report (map [ [d1 d2] -> list (d1 ) (d2 ) ] (but-last divisions) (but-first divisions))
 end
 
+;;
+;; Auxiliar routine for setup_landscape_1
+;;
 to-report region-divisions [ num-regions ]
   ; This procedure reports a list of pxcor that should be outside every region.
   ; Patches with these pxcor will act as "dividers" between regions.
@@ -101,42 +97,19 @@ to-report region-divisions [ num-regions ]
     [ pxcor ] of patch (min-pxcor + (n  * ((max-pxcor - min-pxcor) / num-regions))) 0
   ]
 
-  reset-ticks
 end
 
-
-;to make-landscape_1_scenarios
-          ;if landscape_1_scenarios = "fragmented-segregated" [
-            ;set plant-number 160 / 16  ; same amount of plants in every local area
-            ;set pcolor according to plant colors in the csv file!!!!
-            ;Here I wanted to assign one color per local area (saqure or region) --> segregated landscape
-            ; ]
-
-          ;if landscape = "habitat-structured"[
-            ;set ....
-            ;here only plants can be inside certain habitat, i.e. habitat-nested using the habitat info from the plant-parameter file
-            ;]
-
-          ;if landscape "heterogenously-mixed"[
-             ; Here I wanted to assign all 16 colors=plants randomly to every local area --> mixed landscape
-             ;]
-;end
-
-
-
-;;;;;;;
-
-;;; LANDSCAPE 2
+;;
+;; Random natural
+;;
 to setup-landscape_2
-  clear-all
-  ;make-landscape_2_scenarios
 
   let dim 100
   let ext dim ^ 2
   resize-world 0 (dim - 1) 0 (dim - 1)
   set-patch-size 4
   ask patches [
-     set cluster nobody
+     set habitat nobody
   ]
 
 ;; Define the number of seed points from the slider
@@ -163,27 +136,25 @@ to setup-landscape_2
   foreach seedlist [ ?1 ->
     set i i + 1
     repeat ?1 [
-      ask one-of (patches with [cluster = nobody])[
-        set cluster i
+      ask one-of (patches with [habitat = nobody])[
+        set habitat i
         set pcolor 3 + 10 * i
       ]
     ]
   ]
 
 ;; Fill the voids by propagation
-;; Credit: Uri Wilensky, Patch Cluster Example
-  while [any? patches with [cluster = nobody]] [
-    ask patches with [cluster = nobody][
-      let c [cluster] of one-of neighbors4
+;; Credit: Uri Wilensky, Patch habitat Example
+  while [any? patches with [habitat = nobody]] [
+    ask patches with [habitat = nobody][
+      let c [habitat] of one-of neighbors4
       if c != nobody [
-        set cluster c
+        set habitat c
         set pcolor 3 + 10 * c
       ]
     ]
   ]
 
-
-  reset-ticks
 end
 
 
@@ -208,20 +179,15 @@ end
 ;;; to setup real world landscape, here we could also have three examples from Nepali landscapes
 ; I will ask Tom Timberlake to make three gis renderings for us with color-coded habitats where we can add the plants and flowers
 to setup-landscape_3
- clear-all
- import-drawing "Chickwell Farm.png"
+ ;import-drawing "Chickwell Farm.png"
  import-pcolors "Chickwell Farm.png"
- reset-ticks
 end
 
 ;
 ; procedure to read pollinators parameters from a file
 ;
 to setup-pollinators
-  reset-ticks
-  ;clear-plot
-  clear-turtles
-  set-default-shape pollinators "bug" ; tried "bee 2" shape but does not work, why?
+
   file-close-all ; close all open files
   if not file-exists? "pollinator_parameters.csv" [
     user-message "No file 'pollinator_parameters.csv' exists!"
@@ -239,55 +205,84 @@ to setup-pollinators
     ; here the CSV extension grabs a single line and puts the read data in a list
     let pollinator_data csv:from-row file-read-line
 
-    print pollinator_data
+    ;print pollinator_data
 
-    ; now we can use that list to create a turtle with the saved properties
+    ; we add number-of-pollinators for each pollinator in the file
+    ;
     create-pollinators number-of-pollinators [
       setxy random-pxcor random-pycor
       set species        item 0 pollinator_data
-      set flight_speed   item 1 pollinator_data         ; Seems that this parameter is not needed because the range determines the speed
-      set foraging_min   item 2 pollinator_data
-      set foraging_max   item 3 pollinator_data
-      set degree         item 4 pollinator_data         ; Min degree?????????????
-      set degree_max     item 5 pollinator_data
-      set energy         item 6 pollinator_data         ; Basal energy to start, metabolism is based on alometry ???
-      set body_mass      item 7 pollinator_data
-      set size           item 8 pollinator_data
-      set color          item 9 pollinator_data
-      set euse 0
+      set flight_speed   item 1 pollinator_data         ; We set the speed or the range but not both
+      set stdev_angle    item 2 pollinator_data
+
+      let niche_str      item 3 pollinator_data         ; Niche = which plants the pollinator can pollinate - represent traits like open/closed flowers
+      set niche_list read-from-string niche_str
+      ;show (word "niche_list: " niche_list)
+
+      set energy_by_distance item 4 pollinator_data         ; Basal energy to start, metabolism is based on alometry ???
+      set energy energy_by_distance * 100                   ; initial amount of energy
+
+      set body_mass      item 5 pollinator_data             ; Not needed unless we parametrize from body_mass
+      set size           item 6 pollinator_data
+      set color          item 7 pollinator_data
     ]
   ]
 
-    file-close ; make sure to close the file
+  file-close ; make sure to close the file
 end
 
-;;; !!! NB LEO, I wanted to import plant info but realised that plants are not a breed but the patches
-; how to do this? should we make plant a breed? or can you import directly
-;to make-plants
-;  reset-ticks
- ; file-close-all ; close all open files
- ; if not file-exists? "plant_parameters.csv" [
-  ;  user-message "No file 'plant_parameters.csv' exists! Try pressing WRITE-TURTLES-TO-CSV."
-   ; stop
-  ;]
-  ;file-open "plant_parameters.csv" ; open the file with the turtle data
-  ;; To skip the header row in the while loop,
-  ;  read the header row here to move the cursor down to the next line.
- ; let headings csv:from-row file-read-line
-  ; We'll read all the data in a single loop
- ; while [ not file-at-end? ] [
+to setup-plants
+
+  file-close-all ; close all open files
+  if not file-exists? "plant_parameters.csv" [
+
+    user-message "No file 'plant_parameters.csv' exists!"
+    stop
+  ]
+
+  file-open "plant_parameters.csv" ; open the file with the turtle data
+
+  ;; To skip the header row
+  ;read the header row here to move the cursor down to the next line.
+  let headings csv:from-row file-read-line
+
+  while [ not file-at-end? ] [
+
     ; here the CSV extension grabs a single line and puts the read data in a list
-  ;  let plant_data csv:from-row file-read-line
-    ;set pollinator_data word pollinator_data ";"  ; add semicolon for loop termination
-   ; print plant_data
-    ; now we can use that list to create a turtle with the saved properties
-    ;create-plants plant-number [
-     ; set plant.id item 0 plant_data
-     ; set no.of.flowers item 1 plant_data
-      ;set no.of.flowers_max item 2 plant_data
-    ;]
-  ;]
-;end
+    let plant_data csv:from-row file-read-line
+    ; print (word "plant_data: " plant_data )
+    let plant_sp item 0 plant_data
+    let habitat_str item 1 plant_data
+    let density_str item 2 plant_data
+    let flower_min item 3 plant_data
+    let flower_max item 4 plant_data
+
+    let habitat_list read-from-string habitat_str
+    let density_list read-from-string density_str
+
+    let i 0
+    ; for each habitat set the plants
+    foreach habitat_list [ h ->
+      ;
+      let density item i density_list
+      let npatches count patches with [habitat = h]
+      print (word "Habitat: " h " Total patches: " npatches )
+      set npatches npatches * density
+      print (word "Species: " plant_sp " patches: " npatches )
+
+      set i i + 1
+      ask n-of npatches patches with [habitat = h and plant_species = 0] [
+
+        set plant_species plant_sp
+        set flower_density random ( flower_max - flower_min + 1 ) + flower_min
+        ;show (word "Plant species: " plant_sp " habitat: " h " Plant density: " density " Flower_density: " flower_density)
+        set pcolor pcolor - plant_sp / 2 * h
+
+      ]
+    ]
+    ; setup plants in the landscape
+  ]
+end
 
 to go
 
@@ -308,36 +303,16 @@ to go
     ;patch-flowering
 
   ;]
-
+  tick
 end
 
 ;pollinator behaviour
 to move-pollinators
 
-  ;!!! NB. comment to Leo: this could probably be written more elegantly, we could also consider to let all pollinators turn in the same way [ turn-pillinators ]
-  ; Set turning angle
-  ;
-  (ifelse
-    species = "poll_1"  [ turn-pollinators   ]
-    species = "poll_2"  [ turn-pollinators   ]
-    species = "poll_3"  [ turn-pollinators   ]
-    species = "poll_4"  [ turn-pollinators   ]
-    species = "poll_5"  [ turn-pollinators   ]
-    species = "poll_6"  [ turn-pollinators   ]
-    species = "poll_7"  [ turn-pollinators   ]
-    species = "poll_8"  [ turn-pollinators   ]
-    species = "poll_9"  [ turn-pollinators   ]
-    species = "poll_10" [ turn-pollinators   ]
-    species = "poll_11" [ turn-pollinators   ]
-    species = "poll_12" [ turn-pollinators   ]
-    species = "poll_13" [ turn-diptera   ]
-    species = "poll_14" [ turn-diptera   ]
-    species = "poll_15" [ turn-diptera   ]
-    species = "poll_16" [ turn-diptera   ]
-  )
+  turn-pollinators
   ; Exponential is equivalent to normal centered in 0
   ;
-  let step-length random-exponential flight_speed ; rate ;
+  let step-length random-exponential flight_speed         ; Instead of min max distances set the speed
 
   ; Distance travelled
   ;
@@ -346,15 +321,17 @@ to move-pollinators
   ;
   ; energy lost by movement
   ;
-  set euse step-length * 0.1
+  let euse step-length * energy_by_distance
   set energy (energy - euse)
 
 end
 
 ;; Pollinators procedure
 to turn-pollinators
-  rt random-normal 0 stdev-angle ; this option would activate the slider for turn angle, and apply correlated direction
-                                 ;this applies correlated direction instead of fully random degree angle, based on empirical data for turn angles
+  rt random-normal 0 stdev_angle ; this option would activate the slider for turn angle, and apply correlated direction
+                                  ;this applies correlated direction instead of fully random degree angle, based on empirical data for turn angles
+  ; @Benadi2018 If no flowers are within the pollinator’s perception range, it moves in a correlated random walk
+  ; (with turning angles drawn from a normal distribution with mean 0 and standard deviation j) until it perceives at least one flower.
 end
 
 
@@ -362,17 +339,25 @@ to turn-diptera
   set heading random-float 360
 end
 
-  ; pollinator's procedure
+; pollinator's procedure
+; The pollinators only take the pollen of plants inside their niche
 ;
 to eat
   ;if is-flowering = TRUE [
-
-    if  flower-density >= 10  [
+  let total_flowers 0
+  let p_niche niche_list
+  ;print (word "Plant sp: " species " niche_list: " p_niche "Flower_density: " flower_density)
+  if member? plant_species p_niche [
+      if flower_density > 0 [
       count-visits
-      set energy energy + 1                    ; adds the energy gain from flower nectar/pollen consumption
-      set flower-density flower-density - 10   ; less energy in the plant
-      ;show (word "flower-density: " flower-density " Is Flowering color " pcolor )
+      set energy energy + flower_density * energy_by_distance * 10      ; adds energy proportional to number of flowers in the patch and energy_by_distance
+                                                                       ; maybe we need another parameter for energy_gain
+      show (word "Eated: " energy " flower_density: " flower_density " niche_list: " niche_list )
+
     ]
+  ]
+  ;show (word "Total_flowers: " total_flowers " Is habitat " habitat )
+
   ;]
 end
 
@@ -419,13 +404,28 @@ GRAPHICS-WINDOW
 ticks
 30.0
 
+SLIDER
+15
+20
+197
+53
+number-of-regions
+number-of-regions
+1
+4
+2.0
+1
+1
+NIL
+HORIZONTAL
+
 BUTTON
-668
-22
-837
-55
-setup-landscape_2
-setup-landscape_2
+15
+290
+198
+323
+NIL
+setup
 NIL
 1
 T
@@ -437,89 +437,40 @@ NIL
 1
 
 SLIDER
-9
-60
-191
-93
-number-of-regions
-number-of-regions
+16
+130
+188
+163
+seed-percent
+seed-percent
+0.001
+0.02
+0.004
+0.001
 1
-20
+NIL
+HORIZONTAL
+
+SLIDER
+16
+85
+188
+118
+land-cover-classes
+land-cover-classes
+1
+12
 4.0
 1
 1
 NIL
 HORIZONTAL
 
-BUTTON
-8
-19
-191
-52
-NIL
-setup-landscape_1
-NIL
-1
-T
-OBSERVER
-NIL
-NIL
-NIL
-NIL
-1
-
 SLIDER
-667
-99
-839
-132
-seed-percent
-seed-percent
-0.001
-0.02
-0.02
-0.001
-1
-NIL
-HORIZONTAL
-
-SLIDER
-667
-60
-839
-93
-land-cover-classes
-land-cover-classes
-1
-12
-3.0
-1
-1
-NIL
-HORIZONTAL
-
-BUTTON
-229
-443
-353
-476
-NIL
-setup-pollinators
-NIL
-1
-T
-OBSERVER
-NIL
-NIL
-NIL
-NIL
-1
-
-SLIDER
-365
-443
-537
-476
+15
+425
+187
+458
 number-of-pollinators
 number-of-pollinators
 1
@@ -531,30 +482,20 @@ NIL
 HORIZONTAL
 
 CHOOSER
-8
-105
-189
-150
-landscape_1_scenarios
-landscape_1_scenarios
-"fragmented-segregated" "habitat-structured" "heterogenously-mixed"
-2
-
-CHOOSER
-667
-144
-841
-189
+16
+175
+190
+220
 landscape_2_scenarios
 landscape_2_scenarios
 "fragmented" "intermediate-complexity" "homogenous"
-2
+0
 
 BUTTON
-229
-488
-354
-521
+15
+360
+140
+393
 NIL
 go
 T
@@ -567,21 +508,14 @@ NIL
 NIL
 1
 
-BUTTON
-894
-20
-1030
-53
-NIL
-setup-landscape_3
-NIL
-1
-T
-OBSERVER
-NIL
-NIL
-NIL
-NIL
+CHOOSER
+16
+230
+180
+275
+landscape_type
+landscape_type
+"Regular" "Random natural" "Image"
 1
 
 @#$#@#$#@
@@ -635,6 +569,31 @@ arrow
 true
 0
 Polygon -7500403 true true 150 0 0 150 105 150 105 293 195 293 195 150 300 150
+
+bee
+true
+0
+Polygon -1184463 true false 152 149 77 163 67 195 67 211 74 234 85 252 100 264 116 276 134 286 151 300 167 285 182 278 206 260 220 242 226 218 226 195 222 166
+Polygon -16777216 true false 150 149 128 151 114 151 98 145 80 122 80 103 81 83 95 67 117 58 141 54 151 53 177 55 195 66 207 82 211 94 211 116 204 139 189 149 171 152
+Polygon -7500403 true true 151 54 119 59 96 60 81 50 78 39 87 25 103 18 115 23 121 13 150 1 180 14 189 23 197 17 210 19 222 30 222 44 212 57 192 58
+Polygon -16777216 true false 70 185 74 171 223 172 224 186
+Polygon -16777216 true false 67 211 71 226 224 226 225 211 67 211
+Polygon -16777216 true false 91 257 106 269 195 269 211 255
+Line -1 false 144 100 70 87
+Line -1 false 70 87 45 87
+Line -1 false 45 86 26 97
+Line -1 false 26 96 22 115
+Line -1 false 22 115 25 130
+Line -1 false 26 131 37 141
+Line -1 false 37 141 55 144
+Line -1 false 55 143 143 101
+Line -1 false 141 100 227 138
+Line -1 false 227 138 241 137
+Line -1 false 241 137 249 129
+Line -1 false 249 129 254 110
+Line -1 false 253 108 248 97
+Line -1 false 249 95 235 82
+Line -1 false 235 82 144 100
 
 box
 false
@@ -943,5 +902,5 @@ true
 Line -7500403 true 150 150 90 180
 Line -7500403 true 150 150 210 180
 @#$#@#$#@
-0
+1
 @#$#@#$#@
