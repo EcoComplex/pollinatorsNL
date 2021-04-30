@@ -22,11 +22,16 @@ patches-own[
 pollinators-own [
   species
   flight_speed
+  stdev_angle           ; Correlated random walk
   niche_list            ; plants that the pollinators pollinates
   energy_by_distance
+  perception_angle
+  perception_range
+
   body_mass
-  stdev_angle           ; Correlated random walk
   energy
+  adaptative_step       ; distance travelled
+  found_plant           ; found a plant to pollinate
 ]
 
 
@@ -45,14 +50,15 @@ to setup
   reset-ticks
 end
 
-
-;; Generating the landscapes
-;;; LANDSCAPE 1
+;;
+;; Generating a regular landscape of squares
+;;
 to setup-landscape_1
 
-  ;make-landscape_1_scenarios
-  ;ask patches [set pcolor white]
-  ;resize-world 0 100 0 100
+  resize-world 0 99 0 99
+  set-patch-size 4
+
+  let number-of-regions int sqrt land-cover-classes
 
   set region-boundaries calculate-region-boundaries number-of-regions
   ;print (word "Region boundaries " region-boundaries)
@@ -73,6 +79,7 @@ to setup-landscape_1
   ])
 
 end
+
 
 ;;
 ;; Auxiliar routine for setup_landscape_1
@@ -222,9 +229,14 @@ to setup-pollinators
       set energy_by_distance item 4 pollinator_data         ; Basal energy to start, metabolism is based on alometry ???
       set energy energy_by_distance * 100                   ; initial amount of energy
 
-      set body_mass      item 5 pollinator_data             ; Not needed unless we parametrize from body_mass
-      set size           item 6 pollinator_data
-      set color          item 7 pollinator_data
+      set perception_range item 5 pollinator_data
+      set perception_angle item 6 pollinator_data
+
+      set body_mass      item 7 pollinator_data             ; Not needed unless we parametrize from body_mass
+      set size           item 8 pollinator_data
+      set color          item 9 pollinator_data
+      set adaptative_step 0
+      set found_plant     false
     ]
   ]
 
@@ -276,8 +288,8 @@ to setup-plants
         set plant_species plant_sp
         set flower_density random ( flower_max - flower_min + 1 ) + flower_min
         ;show (word "Plant species: " plant_sp " habitat: " h " Plant density: " density " Flower_density: " flower_density)
-        set pcolor pcolor - plant_sp / 2 * h
-
+        ;set pcolor pcolor - plant_sp / 2 * h
+        set pcolor palette:scale-gradient palette:scheme-colors "Divergent" "RdYlGn" 9 plant_sp 0 10
       ]
     ]
     ; setup plants in the landscape
@@ -306,38 +318,56 @@ to go
   tick
 end
 
-;pollinator behaviour
+;;
+;; Pollinators detect the plant with max flowers then if the plant is not in their niche they keep their random walk
+;; if the plant is in their niche they face the plant and reduce the next step by adaptative_step=0.1
+;;
 to move-pollinators
+  ifelse found_plant [
+    show (word "Found plant in previous tick:  " adaptative_step  )
+    set found_plant false
+    correlated-random-walk
+  ][
+    if active-search [
 
-  turn-pollinators
-  ; Exponential is equivalent to normal centered in 0
-  ;
-  let step-length random-exponential flight_speed         ; Instead of min max distances set the speed
+      let higher-patch max-one-of ( patches in-cone perception_range perception_angle )[flower_density]
+      ;
+      ; The detection is imperfect here because they detect the max density but
 
-  ; Distance travelled
-  ;
-  fd step-length
+      ifelse higher-patch != nobody and  member? [ plant_species ] of higher-patch niche_list [
+        face higher-patch
+        set adaptative_step distance higher-patch
+        move-to higher-patch
+        set found_plant true
+
+        ;show (word "Found plant move to higher patch " higher-patch )
+        ;print (word "Is in niche " [plant_species] of higher-patch " Adaptative_step: " adaptative_step  )
+      ]
+
+    ][
+      correlated-random-walk
+    ]
+  ; @Benadi2018 If no flowers are within the pollinator’s perception range, it moves in a correlated random walk
+  ; (with turning angles drawn from a normal distribution with mean 0 and standard deviation j) until it perceives at least one flower.
+  ]
 
   ;
   ; energy lost by movement
   ;
-  let euse step-length * energy_by_distance
+  let euse adaptative_step * energy_by_distance
   set energy (energy - euse)
 
 end
 
-;; Pollinators procedure
-to turn-pollinators
-  rt random-normal 0 stdev_angle ; this option would activate the slider for turn angle, and apply correlated direction
-                                  ;this applies correlated direction instead of fully random degree angle, based on empirical data for turn angles
-  ; @Benadi2018 If no flowers are within the pollinator’s perception range, it moves in a correlated random walk
-  ; (with turning angles drawn from a normal distribution with mean 0 and standard deviation j) until it perceives at least one flower.
+to correlated-random-walk
+  rt random-normal 0 stdev_angle                              ; correlated random walk
+  set adaptative_step random-exponential flight_speed         ; Instead of min max distances set the speed
+
+  fd adaptative_step
+  ;show (word "Correlated rnd walk step " adaptative_step )
+
 end
 
-
-to turn-diptera
-  set heading random-float 360
-end
 
 ; pollinator's procedure
 ; The pollinators only take the pollen of plants inside their niche
@@ -347,12 +377,12 @@ to eat
   let total_flowers 0
   let p_niche niche_list
   ;print (word "Plant sp: " species " niche_list: " p_niche "Flower_density: " flower_density)
-  if member? plant_species p_niche [
+  if member? plant_species niche_list [
       if flower_density > 0 [
       count-visits
       set energy energy + flower_density * energy_by_distance * 10      ; adds energy proportional to number of flowers in the patch and energy_by_distance
                                                                        ; maybe we need another parameter for energy_gain
-      show (word "Eated: " energy " flower_density: " flower_density " niche_list: " niche_list )
+      show (word "From patch: " patch-here " Energy: " energy " flower_density: " flower_density " niche_list: " niche_list )
 
     ]
   ]
@@ -403,21 +433,6 @@ GRAPHICS-WINDOW
 1
 ticks
 30.0
-
-SLIDER
-15
-20
-197
-53
-number-of-regions
-number-of-regions
-1
-4
-2.0
-1
-1
-NIL
-HORIZONTAL
 
 BUTTON
 15
@@ -475,7 +490,7 @@ number-of-pollinators
 number-of-pollinators
 1
 30
-5.0
+1.0
 1
 1
 NIL
@@ -493,9 +508,9 @@ landscape_2_scenarios
 
 BUTTON
 15
-360
+330
 140
-393
+363
 NIL
 go
 T
@@ -517,6 +532,34 @@ landscape_type
 landscape_type
 "Regular" "Random natural" "Image"
 1
+
+BUTTON
+15
+370
+107
+403
+Go once
+go
+NIL
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
+
+SWITCH
+15
+480
+167
+513
+active-search
+active-search
+0
+1
+-1000
 
 @#$#@#$#@
 ## WHAT IS IT?
