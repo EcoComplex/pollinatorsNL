@@ -320,30 +320,27 @@ end
 
 ;;
 ;; Pollinators detect the plant with max flowers then if the plant is not in their niche they keep their random walk
-;; if the plant is in their niche they face the plant and reduce the next step by adaptative_step=0.1
+;; if the plant is in their niche they face the plant and move to the patch
 ;;
 to move-pollinators
-  ifelse found_plant [
+  ifelse found_plant or not active-search [
     show (word "Found plant in previous tick:  " adaptative_step  )
     set found_plant false
     correlated-random-walk
   ][
-    if active-search [
 
-      let higher-patch max-one-of ( patches in-cone perception_range perception_angle )[flower_density]
-      ;
-      ; The detection is imperfect here because they detect the max density but
+    let higher-patch max-one-of ( patches in-cone perception_range perception_angle )[flower_density]
+    ;
+    ; The detection is imperfect here because they detect the max density but
 
-      ifelse higher-patch != nobody and  member? [ plant_species ] of higher-patch niche_list [
-        face higher-patch
-        set adaptative_step distance higher-patch
-        move-to higher-patch
-        set found_plant true
+    ifelse higher-patch != nobody and  member? [ plant_species ] of higher-patch niche_list [
+      face higher-patch
+      set adaptative_step distance higher-patch
+      move-to higher-patch
+      set found_plant true
 
-        ;show (word "Found plant move to higher patch " higher-patch )
-        ;print (word "Is in niche " [plant_species] of higher-patch " Adaptative_step: " adaptative_step  )
-      ]
-
+      ;show (word "Found plant move to higher patch " higher-patch )
+      ;print (word "Is in niche " [plant_species] of higher-patch " Adaptative_step: " adaptative_step  )
     ][
       correlated-random-walk
     ]
@@ -531,7 +528,7 @@ CHOOSER
 landscape_type
 landscape_type
 "Regular" "Random natural" "Image"
-1
+0
 
 BUTTON
 15
@@ -560,6 +557,17 @@ active-search
 0
 1
 -1000
+
+MONITOR
+395
+535
+582
+580
+Mean Energy of pollinators
+mean [ energy ]  of pollinators
+4
+1
+11
 
 @#$#@#$#@
 ## WHAT IS IT?
