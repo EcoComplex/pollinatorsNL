@@ -21,6 +21,9 @@ patches-own[
 ;variables characterising the pollinators
 pollinators-own [
   species
+  eusocial               ; is a eusocial species?
+  nest_habitat           ;
+  nest                   ; the nest patch
   flight_speed
   stdev_angle           ; Correlated random walk
   niche_list            ; plants that the pollinators pollinates
@@ -219,28 +222,56 @@ to setup-pollinators
     create-pollinators number-of-pollinators [
       setxy random-pxcor random-pycor
       set species        item 0 pollinator_data
-      set flight_speed   item 1 pollinator_data         ; We set the speed or the range but not both
-      set stdev_angle    item 2 pollinator_data
+      set eusocial       item 1 pollinator_data
+      set flight_speed   item 2 pollinator_data         ; We set the speed or the range but not both
+      set stdev_angle    item 3 pollinator_data
 
-      let niche_str      item 3 pollinator_data         ; Niche = which plants the pollinator can pollinate - represent traits like open/closed flowers
+      let niche_str      item 4 pollinator_data         ; Niche = which plants the pollinator can pollinate - represent traits like open/closed flowers
       set niche_list read-from-string niche_str
       ;show (word "niche_list: " niche_list)
 
-      set energy_by_distance item 4 pollinator_data         ; Basal energy to start, metabolism is based on alometry ???
+      set nest_habitat       item 5 pollinator_data
+      set energy_by_distance item 6 pollinator_data         ; Basal energy to start, metabolism is based on alometry ???
       set energy energy_by_distance * 100                   ; initial amount of energy
 
-      set perception_range item 5 pollinator_data
-      set perception_angle item 6 pollinator_data
+      set perception_range item 7 pollinator_data
+      set perception_angle item 8 pollinator_data
 
-      set body_mass      item 7 pollinator_data             ; Not needed unless we parametrize from body_mass
-      set size           item 8 pollinator_data
-      set color          item 9 pollinator_data
+      set body_mass      item 9 pollinator_data             ; Not needed unless we parametrize from body_mass
+      set size           item 10 pollinator_data
+      set color          item 11 pollinator_data
       set adaptative_step 0
       set found_plant     false
     ]
   ]
 
   file-close ; make sure to close the file
+
+  eusociality-setup
+end
+
+;;
+;; Set nest sites for eusocial pollinators
+;;
+to eusociality-setup
+  let max-species max [species] of pollinators
+  let sp-list (range 1 max-species)
+  foreach sp-list [ sp ->
+    let sp-pollinator one-of pollinators with [sp = species and eusocial ]
+    if sp-pollinator != nobody  [
+      let ne-habitat [nest_habitat] of sp-pollinator
+      let nest-patch one-of patches with [ habitat = ne-habitat ]
+      print (word "Pollinator: " sp-pollinator " Habitat: " ne-habitat " Nest patch: " nest-patch)
+      let eu-pollinators pollinators with [sp = species and eusocial ]
+      if eu-pollinators != nobody  [
+        ask eu-pollinators [
+          set nest nest-patch
+          move-to nest
+        ]
+      ]
+    ]
+  ]
+
 end
 
 to setup-plants
@@ -324,7 +355,7 @@ end
 ;;
 to move-pollinators
   ifelse found_plant or not active-search [
-    show (word "Found plant in previous tick:  " adaptative_step  )
+    ;show (word "Found plant in previous tick:  " adaptative_step  )
     set found_plant false
     correlated-random-walk
   ][
@@ -357,11 +388,11 @@ to move-pollinators
 end
 
 to correlated-random-walk
-  rt random-normal 0 stdev_angle                              ; correlated random walk
-  set adaptative_step random-exponential flight_speed         ; Instead of min max distances set the speed
+  rt random-normal 0 stdev_angle                          ; correlated random walk
+  set adaptative_step random-poisson flight_speed         ; Instead of min max distances set the speed
 
   fd adaptative_step
-  ;show (word "Correlated rnd walk step " adaptative_step )
+  ;show (word "Correlated rnd walk poisson step " adaptative_step )
 
 end
 
@@ -377,9 +408,9 @@ to eat
   if member? plant_species niche_list [
       if flower_density > 0 [
       count-visits
-      set energy energy + flower_density * energy_by_distance * 10      ; adds energy proportional to number of flowers in the patch and energy_by_distance
+      set energy energy + flower_density * energy_by_distance * 10     ; adds energy proportional to number of flowers in the patch and energy_by_distance
                                                                        ; maybe we need another parameter for energy_gain
-      show (word "From patch: " patch-here " Energy: " energy " flower_density: " flower_density " niche_list: " niche_list )
+      ;show (word "From patch: " patch-here " Energy: " energy " flower_density: " flower_density " niche_list: " niche_list )
 
     ]
   ]
@@ -401,7 +432,7 @@ to count-visits
     ;; File recording visits
     ;;
     ;file-print (word species ";" pcolor )
-    ;;print (word species ";" pcolor )
+    ;file-print (word  who ";" species ";" patch-here ";" plant_species ";" habitat )
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
@@ -425,8 +456,8 @@ GRAPHICS-WINDOW
 99
 0
 99
-0
-0
+1
+1
 1
 ticks
 30.0
@@ -487,7 +518,7 @@ number-of-pollinators
 number-of-pollinators
 1
 30
-1.0
+3.0
 1
 1
 NIL
@@ -528,7 +559,7 @@ CHOOSER
 landscape_type
 landscape_type
 "Regular" "Random natural" "Image"
-0
+1
 
 BUTTON
 15
@@ -559,10 +590,10 @@ active-search
 -1000
 
 MONITOR
-395
-535
-582
-580
+225
+470
+412
+515
 Mean Energy of pollinators
 mean [ energy ]  of pollinators
 4
