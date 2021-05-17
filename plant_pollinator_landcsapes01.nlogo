@@ -222,7 +222,7 @@ to setup-pollinators
     create-pollinators number-of-pollinators [
       setxy random-pxcor random-pycor
       set species        item 0 pollinator_data
-      set eusocial       item 1 pollinator_data
+      set eusocial       item 1 pollinator_data         ; 0= None, 1=solitary, 2=full
       set flight_speed   item 2 pollinator_data         ; We set the speed or the range but not both
       set stdev_angle    item 3 pollinator_data
 
@@ -257,16 +257,42 @@ to eusociality-setup
   let max-species max [species] of pollinators
   let sp-list (range 1 max-species)
   foreach sp-list [ sp ->
-    let sp-pollinator one-of pollinators with [sp = species and eusocial ]
+    let sp-pollinator one-of pollinators with [sp = species and eusocial > 0 ]
     if sp-pollinator != nobody  [
-      let ne-habitat [nest_habitat] of sp-pollinator
-      let nest-patch one-of patches with [ habitat = ne-habitat ]
-      print (word "Pollinator: " sp-pollinator " Habitat: " ne-habitat " Nest patch: " nest-patch)
-      let eu-pollinators pollinators with [sp = species and eusocial ]
-      if eu-pollinators != nobody  [
-        ask eu-pollinators [
-          set nest nest-patch
-          move-to nest
+
+      ifelse [eusocial] of sp-pollinator = 2 [
+        let ne-habitat [nest_habitat] of sp-pollinator
+        let nest-patch one-of patches with [ habitat = ne-habitat ]
+        if nest-patch = nobody  [
+          print "Habitat of an eusociality pollinator must be valid !!!!!!!!!!!!!"
+          stop
+        ]
+
+        print (word "Pollinator: " sp-pollinator " Habitat: " ne-habitat " Nest patch: " nest-patch)
+        let eu-pollinators pollinators with [sp = species and eusocial = 2 ]
+        if eu-pollinators != nobody  [
+          ask eu-pollinators [
+            set nest nest-patch
+            move-to nest
+          ]
+        ]
+      ][ ;; eusocial = 1 solitary species
+        let eu-pollinators pollinators with [sp = species and eusocial = 1 ]
+
+        if eu-pollinators != nobody  [
+          ask eu-pollinators [
+            let ne-habitat [nest_habitat] of sp-pollinator
+            let nest-patch one-of patches with [ habitat = ne-habitat ]
+            if nest-patch = nobody  [
+              print "Habitat of an eusociality pollinator must be valid !!!!!!!!!!!!!"
+              stop
+            ]
+
+            set nest nest-patch
+            move-to nest
+            show (word "Pollinator: " sp-pollinator " Habitat: " ne-habitat " Nest patch: " nest-patch)
+
+          ]
         ]
       ]
     ]
@@ -309,9 +335,9 @@ to setup-plants
       ;
       let density item i density_list
       let npatches count patches with [habitat = h]
-      print (word "Habitat: " h " Total patches: " npatches )
+      ;print (word "Habitat: " h " Total patches: " npatches )
       set npatches npatches * density
-      print (word "Species: " plant_sp " patches: " npatches )
+      ;print (word "Species: " plant_sp " patches: " npatches )
 
       set i i + 1
       ask n-of npatches patches with [habitat = h and plant_species = 0] [
