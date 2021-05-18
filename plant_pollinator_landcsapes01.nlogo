@@ -3,22 +3,28 @@ extensions [ csv palette ]
 globals [
   region-boundaries ; a list of regions definitions, where each region is a list of its min pxcor and max pxcor
   plant-number
+  day               ; day of the simulation
 
 ]
 
 breed [ pollinators pollinator ]
 
-;patches are plants
-;patch variables
+;; patches have 1 species of plants
+;; patch variables have underscores
+;;
 patches-own[
-  number-of-visits
+  number_of_visits
   habitat
   plant_species
   flower_density       ;; More density more attractive to pollinatiors a proxy of energy available
+  flower_max
+  flower_min           ;; Parameters to replenish the plant each day
 
 ]
 
-;variables characterising the pollinators
+;;
+;; pollinators variables have underscores
+
 pollinators-own [
   species
   eusocial               ; is a eusocial species?
@@ -323,8 +329,8 @@ to setup-plants
     let plant_sp item 0 plant_data
     let habitat_str item 1 plant_data
     let density_str item 2 plant_data
-    let flower_min item 3 plant_data
-    let flower_max item 4 plant_data
+    let sp_flower_min item 3 plant_data
+    let sp_flower_max item 4 plant_data
 
     let habitat_list read-from-string habitat_str
     let density_list read-from-string density_str
@@ -343,19 +349,36 @@ to setup-plants
       ask n-of npatches patches with [habitat = h and plant_species = 0] [
 
         set plant_species plant_sp
-        set flower_density random ( flower_max - flower_min + 1 ) + flower_min
+        set flower_max sp_flower_max
+        set flower_min sp_flower_min
+        ;set flower_density random ( flower_max - flower_min + 1 ) + flower_min
         ;show (word "Plant species: " plant_sp " habitat: " h " Plant density: " density " Flower_density: " flower_density)
         ;set pcolor pcolor - plant_sp / 2 * h
-        set pcolor palette:scale-gradient palette:scheme-colors "Divergent" "RdYlGn" 9 plant_sp 0 10
+        set pcolor palette:scale-gradient palette:scheme-colors "Divergent" "RdYlGn" 9 plant_sp 0 10   ;; Color assumes 10 plant species
       ]
     ]
     ; setup plants in the landscape
   ]
 end
 
+to replenish-flowers
+  print "Replenish-flowers"
+  ask patches with [ plant_species != 0 ][
+
+    set flower_density random ( flower_max - flower_min + 1 ) + flower_min
+    ;show (word "Plant species: " plant_species " habitat: " habitat " Flower_density: " flower_density)
+
+  ]
+end
+
 to go
 
-  if not any? pollinators or ticks = 500 [
+  set day ( ticks / 480 )
+  if ( int day ) = day [                              ; replenish-flowers first time and then at the end of the day
+    replenish-flowers
+  ]
+
+  if not any? pollinators or day = 10 [               ; 480 ticks per day
     file-close
     stop
   ]
@@ -388,7 +411,7 @@ to move-pollinators
 
     let higher-patch max-one-of ( patches in-cone perception_range perception_angle )[flower_density]
     ;
-    ; The detection is imperfect here because they detect the max density but
+    ; The detection is imperfect because they detect the max density but not the species at distance, they detect species only when they are in the flower's patch
 
     ifelse higher-patch != nobody and  member? [ plant_species ] of higher-patch niche_list [
       face higher-patch
@@ -408,9 +431,11 @@ to move-pollinators
   ;
   ; energy lost by movement
   ;
+
   let euse adaptative_step * energy_by_distance
   set energy (energy - euse)
 
+  ;set foraging_distance  foraging_distance + adaptative_step
 end
 
 to correlated-random-walk
@@ -437,6 +462,7 @@ to eat
       set energy energy + flower_density * energy_by_distance * 10     ; adds energy proportional to number of flowers in the patch and energy_by_distance
                                                                        ; maybe we need another parameter for energy_gain
       ;show (word "From patch: " patch-here " Energy: " energy " flower_density: " flower_density " niche_list: " niche_list )
+      set flower_density flower_density - 1
 
     ]
   ]
@@ -453,7 +479,7 @@ to death
 end
 
 to count-visits
-    set number-of-visits number-of-visits + 1
+    set number_of_visits number_of_visits + 1
     ;;
     ;; File recording visits
     ;;
@@ -544,7 +570,7 @@ number-of-pollinators
 number-of-pollinators
 1
 30
-3.0
+10.0
 1
 1
 NIL
@@ -623,6 +649,17 @@ MONITOR
 Mean Energy of pollinators
 mean [ energy ]  of pollinators
 4
+1
+11
+
+MONITOR
+435
+470
+492
+515
+NIL
+day
+2
 1
 11
 
