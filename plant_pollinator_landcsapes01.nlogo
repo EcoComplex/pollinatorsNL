@@ -33,14 +33,15 @@ pollinators-own [
   flight_speed
   stdev_angle           ; Correlated random walk
   niche_list            ; plants that the pollinators pollinates
-  energy_by_distance
+  max_distance          ;
   perception_angle
   perception_range
 
   body_mass
-  energy
+  foraging_distance
   adaptative_step       ; distance travelled
   found_plant           ; found a plant to pollinate
+  on_nest               ; pollinator is on nest
 ]
 
 
@@ -237,8 +238,8 @@ to setup-pollinators
       ;show (word "niche_list: " niche_list)
 
       set nest_habitat       item 5 pollinator_data
-      set energy_by_distance item 6 pollinator_data         ; Basal energy to start, metabolism is based on alometry ???
-      set energy energy_by_distance * 100                   ; initial amount of energy
+      set max_distance item 6 pollinator_data         ; Basal energy to start, metabolism is based on alometry ???
+      ;set energy energy_by_distance * 100                   ; initial amount of energy
 
       set perception_range item 7 pollinator_data
       set perception_angle item 8 pollinator_data
@@ -274,7 +275,7 @@ to eusociality-setup
           stop
         ]
 
-        print (word "Pollinator: " sp-pollinator " Habitat: " ne-habitat " Nest patch: " nest-patch)
+        ;print (word "Pollinator: " sp-pollinator " Habitat: " ne-habitat " Nest patch: " nest-patch)
         let eu-pollinators pollinators with [sp = species and eusocial = 2 ]
         if eu-pollinators != nobody  [
           ask eu-pollinators [
@@ -296,7 +297,7 @@ to eusociality-setup
 
             set nest nest-patch
             move-to nest
-            show (word "Pollinator: " sp-pollinator " Habitat: " ne-habitat " Nest patch: " nest-patch)
+            ;show (word "Pollinator: " sp-pollinator " Habitat: " ne-habitat " Nest patch: " nest-patch)
 
           ]
         ]
@@ -376,6 +377,7 @@ to go
   set day ( ticks / 480 )
   if ( int day ) = day [                              ; replenish-flowers first time and then at the end of the day
     replenish-flowers
+    return-all-pollinators
   ]
 
   if not any? pollinators or day = 10 [               ; 480 ticks per day
@@ -398,44 +400,79 @@ to go
   tick
 end
 
+to return-all-pollinators
+  ask pollinators [
+    ifelse eusocial > 0 [
+      if on_nest = 0 [
+        set foraging_distance 0
+        move-to nest
+        show "End of day return to nest "
+      ]
+    ][
+      set foraging_distance 0
+    ]
+
+  ]
+
+end
+
 ;;
 ;; Pollinators detect the plant with max flowers then if the plant is not in their niche they keep their random walk
 ;; if the plant is in their niche they face the plant and move to the patch
 ;;
 to move-pollinators
-  ifelse found_plant or not active-search [
-    ;show (word "Found plant in previous tick:  " adaptative_step  )
-    set found_plant false
-    correlated-random-walk
-  ][
-
-    let higher-patch max-one-of ( patches in-cone perception_range perception_angle )[flower_density]
-    ;
-    ; The detection is imperfect because they detect the max density but not the species at distance, they detect species only when they are in the flower's patch
-
-    ifelse higher-patch != nobody and  member? [ plant_species ] of higher-patch niche_list [
-      face higher-patch
-      set adaptative_step distance higher-patch
-      move-to higher-patch
-      set found_plant true
-
-      ;show (word "Found plant move to higher patch " higher-patch )
-      ;print (word "Is in niche " [plant_species] of higher-patch " Adaptative_step: " adaptative_step  )
-    ][
-      correlated-random-walk
-    ]
-  ; @Benadi2018 If no flowers are within the pollinator’s perception range, it moves in a correlated random walk
-  ; (with turning angles drawn from a normal distribution with mean 0 and standard deviation j) until it perceives at least one flower.
+  ifelse on_nest > 0 [
+    set  on_nest int ( on_nest - 1 )
+    set foraging_distance 0
+    show (word "Decrement on_nest: " on_nest)
   ]
+  [
+    ifelse found_plant or not active-search [
+      ;show (word "Found plant in previous tick:  " adaptative_step  )
+      ifelse eusocial > 0 [
+        ifelse foraging_distance > max_distance
+        [
+          move-to nest
+          set on_nest foraging_distance / flight_speed
+          show (word "Foraging distance: " foraging_distance " Max distance: " max_distance " on_nest: " on_nest " nest: " nest )
 
-  ;
-  ; energy lost by movement
-  ;
+        ][
+          correlated-random-walk
+        ]
+      ][
+        correlated-random-walk
+      ]
+      set found_plant false
+    ][
 
-  let euse adaptative_step * energy_by_distance
-  set energy (energy - euse)
+      let higher-patch max-one-of ( patches in-cone perception_range perception_angle )[flower_density]
+      ;
+      ; The detection is imperfect because they detect the max density but not the species at distance, they detect species only when they are in the flower's patch
 
-  ;set foraging_distance  foraging_distance + adaptative_step
+      ifelse higher-patch != nobody and  member? [ plant_species ] of higher-patch niche_list [
+        face higher-patch
+        set adaptative_step distance higher-patch
+        move-to higher-patch
+        set found_plant true
+
+        ;show (word "Found plant move to higher patch " higher-patch )
+        ;print (word "Is in niche " [plant_species] of higher-patch " Adaptative_step: " adaptative_step  )
+      ][
+        correlated-random-walk
+      ]
+      ; @Benadi2018 If no flowers are within the pollinator’s perception range, it moves in a correlated random walk
+      ; (with turning angles drawn from a normal distribution with mean 0 and standard deviation j) until it perceives at least one flower.
+    ]
+
+    ;
+    ; energy lost by movement
+    ;
+
+    ;let euse adaptative_step * energy_by_distance
+    ;set energy (energy - euse)
+
+    set foraging_distance  foraging_distance + adaptative_step
+  ]
 end
 
 to correlated-random-walk
@@ -459,7 +496,7 @@ to eat
   if member? plant_species niche_list [
       if flower_density > 0 [
       count-visits
-      set energy energy + flower_density * energy_by_distance * 10     ; adds energy proportional to number of flowers in the patch and energy_by_distance
+      ;set energy energy + flower_density * energy_by_distance * 10     ; adds energy proportional to number of flowers in the patch and energy_by_distance
                                                                        ; maybe we need another parameter for energy_gain
       ;show (word "From patch: " patch-here " Energy: " energy " flower_density: " flower_density " niche_list: " niche_list )
       set flower_density flower_density - 1
@@ -475,7 +512,7 @@ end
 ; pollinators die after running out of fuel=energy
 ;
 to death
-    if ( energy < 0 ) [ die ]
+;    if ( energy < 0 ) [ die ]
 end
 
 to count-visits
@@ -570,7 +607,7 @@ number-of-pollinators
 number-of-pollinators
 1
 30
-10.0
+3.0
 1
 1
 NIL
@@ -644,10 +681,10 @@ active-search
 MONITOR
 225
 470
-412
+410
 515
-Mean Energy of pollinators
-mean [ energy ]  of pollinators
+Mean foraging distance
+mean [ foraging_distance ]  of pollinators
 4
 1
 11
