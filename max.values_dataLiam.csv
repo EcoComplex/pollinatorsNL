@@ -1,0 +1,7 @@
+﻿Clusters,max.dist.log,max.dist.real,max.ITD,flight.speed.max,ITD,social_tree,generalism
+cl1,6.396929655,600,2.9,1,2.763526898,Solitary,Both
+cl2,6.762925399,865,1.8,2,1.8,Highly Eusocial,Polylectic
+cl3,7.975571534,2909,3.21,6,3.21,Highly Eusocial,Polylectic
+cl4,7.156625471,1283,4.41,3,4.41,Primitively Eusocial,Polylectic
+cl5,5.991464547,400,1.5,1,1.5,Solitary,Oligolectic
+cl6,8.517193191,5000,7.68,10,7.68,Solitary,Polylectic
