@@ -1,0 +1,38 @@
+
+---
+title: "Example of reading simulations from behaviorspace"
+author: "Leonardo A. Saravia"
+date: "21/5/2021"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE,echo=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+
+needed_packages <- c(
+    "tidyverse"
+  , "lubridate")
+
+lapply(needed_packages, function(x) { if(!require(x,character.only = TRUE)) install.packages(x)} )
+
+theme_set(theme_bw())
+
+```
+
+# Run and Read simulations from behaviorspace (headless)
+
+```{r read_behav, echo=FALSE, tidy=TRUE, message=FALSE, warning=FALSE, eval=FALSE}
+
+# Probably not work outside linux
+#
+system("bash netlogo-headless-exp.sh")
+
+simul_fn <- list.files(path="Simulations",pattern="^Visits_21-May-2021_06:31.*csv")
+
+mdl <- lapply( simul_fn, function(x){ read_delim(paste0("Simulations/",x),";") })
+
+mdl <- bind_rows(mdl)
+```
+

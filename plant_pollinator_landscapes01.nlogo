@@ -57,6 +57,15 @@ to setup
   )
   setup-plants
   setup-pollinators
+
+  if generate-output-file [
+    ;let file-name (word "Visits_" substring date-and-time 16 27 "_" substring date-and-time 0 8 ".csv")
+    let file-name (word "Simulations/Visits_" substring date-and-time 16 27 "_" substring date-and-time 0 5 "_run_" behaviorspace-run-number ".csv")
+
+    print file-name
+    file-open file-name
+    file-print (word   "run; day; pollinator_agent; pollinator_species; plant_patch; plant_species; habitat")
+  ]
   reset-ticks
 end
 
@@ -65,8 +74,8 @@ end
 ;;
 to setup-landscape_1
 
-  resize-world 0 99 0 99
-  set-patch-size 4
+  ;resize-world 0 99 0 99
+  ;set-patch-size 4
 
   let number-of-regions int sqrt land-cover-classes
 
@@ -121,10 +130,15 @@ end
 ;;
 to setup-landscape_2
 
-  let dim 100
+  let dim world-width     ; assumes sizes mutilples of 10
+  if dim mod 10 != 0 [
+    print "ERROR: Assumes world-width multiples of 10"
+    stop
+  ]
+
   let ext dim ^ 2
-  resize-world 0 (dim - 1) 0 (dim - 1)
-  set-patch-size 4
+  ;resize-world 0 (dim - 1) 0 (dim - 1)
+  ;set-patch-size 4
   ask patches [
      set habitat nobody
   ]
@@ -363,7 +377,7 @@ to setup-plants
 end
 
 to replenish-flowers
-  print "Replenish-flowers"
+  ;print "Replenish-flowers"
   ask patches with [ plant_species != 0 ][
 
     set flower_density random ( flower_max - flower_min + 1 ) + flower_min
@@ -380,7 +394,7 @@ to go
     return-all-pollinators
   ]
 
-  if not any? pollinators or day = 10 [               ; 480 ticks per day
+  if not any? pollinators or day = number-of-days [               ; 480 ticks per day
     file-close
     stop
   ]
@@ -406,7 +420,7 @@ to return-all-pollinators
       if on_nest = 0 [
         set foraging_distance 0
         move-to nest
-        show "End of day return to nest "
+        ;show "End of day return to nest "
       ]
     ][
       set foraging_distance 0
@@ -424,7 +438,7 @@ to move-pollinators
   ifelse on_nest > 0 [
     set  on_nest int ( on_nest - 1 )
     set foraging_distance 0
-    show (word "Decrement on_nest: " on_nest)
+    ;show (word "Decrement on_nest: " on_nest)
   ]
   [
     ifelse found_plant or not active-search [
@@ -434,7 +448,7 @@ to move-pollinators
         [
           move-to nest
           set on_nest foraging_distance / flight_speed
-          show (word "Foraging distance: " foraging_distance " Max distance: " max_distance " on_nest: " on_nest " nest: " nest )
+          ;show (word "Foraging distance: " foraging_distance " Max distance: " max_distance " on_nest: " on_nest " nest: " nest )
 
         ][
           correlated-random-walk
@@ -516,12 +530,15 @@ to death
 end
 
 to count-visits
-    set number_of_visits number_of_visits + 1
-    ;;
-    ;; File recording visits
-    ;;
+  set number_of_visits number_of_visits + 1
+  ;;
+  ;; File recording visits
+  ;;
+  if generate-output-file [
+
     ;file-print (word species ";" pcolor )
-    ;file-print (word  who ";" species ";" patch-here ";" plant_species ";" habitat )
+    file-print (word   behaviorspace-run-number ";" precision day 4 ";" who ";" species ";" patch-here ";" plant_species ";" habitat )
+  ]
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
@@ -552,10 +569,10 @@ ticks
 30.0
 
 BUTTON
-15
-290
-198
-323
+10
+355
+193
+388
 NIL
 setup
 NIL
@@ -569,10 +586,10 @@ NIL
 1
 
 SLIDER
-16
-130
-188
-163
+15
+70
+187
+103
 seed-percent
 seed-percent
 0.001
@@ -584,10 +601,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-16
-85
-188
-118
+15
+25
+187
+58
 land-cover-classes
 land-cover-classes
 1
@@ -600,9 +617,9 @@ HORIZONTAL
 
 SLIDER
 15
-425
+220
 187
-458
+253
 number-of-pollinators
 number-of-pollinators
 1
@@ -614,20 +631,20 @@ NIL
 HORIZONTAL
 
 CHOOSER
-16
-175
-190
-220
+15
+115
+189
+160
 landscape_2_scenarios
 landscape_2_scenarios
 "fragmented" "intermediate-complexity" "homogenous"
 0
 
 BUTTON
-15
-330
-140
-363
+10
+395
+135
+428
 NIL
 go
 T
@@ -641,20 +658,20 @@ NIL
 1
 
 CHOOSER
-16
-230
-180
-275
+15
+170
+179
+215
 landscape_type
 landscape_type
 "Regular" "Random natural" "Image"
 1
 
 BUTTON
-15
-370
-107
-403
+10
+435
+102
+468
 Go once
 go
 NIL
@@ -669,9 +686,9 @@ NIL
 
 SWITCH
 15
-480
+260
 167
-513
+293
 active-search
 active-search
 0
@@ -699,6 +716,32 @@ day
 2
 1
 11
+
+SWITCH
+10
+485
+212
+518
+generate-output-file
+generate-output-file
+0
+1
+-1000
+
+SLIDER
+15
+305
+217
+338
+number-of-days
+number-of-days
+1
+20
+3.0
+1
+1
+NIL
+HORIZONTAL
 
 @#$#@#$#@
 ## WHAT IS IT?
@@ -1071,6 +1114,36 @@ NetLogo 6.2.0
 @#$#@#$#@
 @#$#@#$#@
 @#$#@#$#@
+<experiments>
+  <experiment name="regular3days" repetitions="10" runMetricsEveryStep="true">
+    <setup>setup</setup>
+    <go>go</go>
+    <enumeratedValueSet variable="land-cover-classes">
+      <value value="4"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="landscape_type">
+      <value value="&quot;Regular&quot;"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="seed-percent">
+      <value value="0.004"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="number-of-days">
+      <value value="3"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="number-of-pollinators">
+      <value value="3"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="active-search">
+      <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="generate-output-file">
+      <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="landscape_2_scenarios">
+      <value value="&quot;fragmented&quot;"/>
+    </enumeratedValueSet>
+  </experiment>
+</experiments>
 @#$#@#$#@
 @#$#@#$#@
 default
