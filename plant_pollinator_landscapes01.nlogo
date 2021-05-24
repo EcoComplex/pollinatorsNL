@@ -263,6 +263,8 @@ to setup-pollinators
       set color          item 11 pollinator_data
       set adaptative_step 0
       set found_plant     false
+
+      body-mass-dependent-distance
     ]
   ]
 
@@ -271,6 +273,27 @@ to setup-pollinators
   eusociality-setup
 end
 
+to body-mass-dependent-distance
+  if body_mass > 0 [                                  ; Parametrize flight_speed and max_distance using Liam's model
+    (ifelse eusocial = 2                                ; highly eusocial
+      [
+        set flight_speed ( exp (5.34 + body_mass * 0.3) ) / 480
+        set max_distance exp (6.56 + body_mass * 0.33)
+      ]
+      eusocial = 1
+      [
+        set flight_speed ( exp (5.34 + body_mass * ( 0.3 - 1.12) ) ) / 480
+        set max_distance exp (6.56 + body_mass * ( 0.33 - 1.13) )
+      ]
+      eusocial = 0
+      [
+        set flight_speed ( exp (5.34 + body_mass * ( 0.3 - 1.13) ) ) / 480
+        set max_distance exp (6.56 + body_mass * ( 0.33 - 1.10) )
+      ]
+    )
+    show (word "species: " species " body_mass: " body_mass " fligth_speed: "  flight_speed " max_distance: " max_distance)
+  ]
+end
 ;;
 ;; Set nest sites for eusocial pollinators
 ;;
