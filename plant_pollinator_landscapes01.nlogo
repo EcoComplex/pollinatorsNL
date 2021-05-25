@@ -244,19 +244,22 @@ to setup-pollinators
       setxy random-pxcor random-pycor
       set species        item 0 pollinator_data
       set eusocial       item 1 pollinator_data         ; 0= None, 1=solitary, 2=full
-      set flight_speed   item 2 pollinator_data         ; We set the speed or the range but not both
+      set flight_speed   item 2 pollinator_data         ; if body_mass > 0 then it is calcualted from Liam's model
       set stdev_angle    item 3 pollinator_data
 
       let niche_str      item 4 pollinator_data         ; Niche = which plants the pollinator can pollinate - represent traits like open/closed flowers
       set niche_list read-from-string niche_str
       ;show (word "niche_list: " niche_list)
 
-      set nest_habitat       item 5 pollinator_data
-      set max_distance item 6 pollinator_data         ; Basal energy to start, metabolism is based on alometry ???
+      set nest_habitat       item 5 pollinator_data     ; The habitat where the nest is
+      set max_distance item 6 pollinator_data           ; max distance a pollinator flies before return to nest, if body_mass >0 set from Liam's model
       ;set energy energy_by_distance * 100                   ; initial amount of energy
 
       set perception_range item 7 pollinator_data
       set perception_angle item 8 pollinator_data
+                                                            ; Should add memory_extinction 1/480 = 1 Day
+                                                            ; last_found_patch to signal the last plant they found and to communicate
+                                                            ; to other pollinators in nest.
 
       set body_mass      item 9 pollinator_data             ; Not needed unless we parametrize from body_mass
       set size           item 10 pollinator_data
@@ -264,7 +267,7 @@ to setup-pollinators
       set adaptative_step 0
       set found_plant     false
 
-      body-mass-dependent-distance
+      body-mass-dependent-distance                       ; setup parameters when body_mass > 0
     ]
   ]
 
@@ -688,7 +691,7 @@ CHOOSER
 landscape_type
 landscape_type
 "Regular" "Random natural" "Image"
-1
+0
 
 BUTTON
 10
