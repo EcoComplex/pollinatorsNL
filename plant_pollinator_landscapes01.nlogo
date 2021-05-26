@@ -71,7 +71,7 @@ to setup
       file-open file-name
     ]
 
-    print file-name
+    print (word file-name " - habitat proportions: " habitat-proportions )
     file-print (word   "run; day; pollinator_agent; pollinator_species; plant_patch; plant_species; habitat; habitat_proportions; foraging_distance; ")
   ]
   reset-ticks
@@ -451,10 +451,13 @@ end
 to return-all-pollinators
   ask pollinators [
     ifelse eusocial > 0 [
-      if on_nest = 0 [
+      ;show word "End of day on_nest: " on_nest
+
+      ifelse on_nest = 0 [
         set foraging_distance 0
         move-to nest
-        ;show "End of day return to nest "
+      ][
+        set on_nest 0                                              ; after the night they don't wait and start pollination
       ]
     ][
       set foraging_distance 0
@@ -469,8 +472,8 @@ end
 ;; if the plant is in their niche they face the plant and move to the patch
 ;;
 to move-pollinators
-  ifelse on_nest > 0 [
-    set  on_nest int ( on_nest - 1 )
+  ifelse on_nest > 0 [                                              ; Resting on the nest the amount of time if they should flight foraging_distance back
+    set  on_nest on_nest - 1
     set foraging_distance 0
     ;show (word "Decrement on_nest: " on_nest)
   ]
@@ -478,10 +481,10 @@ to move-pollinators
     ifelse found_plant or not active-search [
       ;show (word "Found plant in previous tick:  " adaptative_step  )
       ifelse eusocial > 0 [
-        ifelse foraging_distance > max_distance
+        ifelse foraging_distance > max_distance                     ; After max distance they go nest and stay there until foraging_distance/ flight_speed steps
         [
           move-to nest
-          set on_nest foraging_distance / flight_speed
+          set on_nest int ( foraging_distance / flight_speed )
           ;show (word "Foraging distance: " foraging_distance " Max distance: " max_distance " on_nest: " on_nest " nest: " nest )
 
         ][
