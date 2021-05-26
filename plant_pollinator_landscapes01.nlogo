@@ -72,7 +72,7 @@ to setup
     ]
 
     print (word file-name " - habitat proportions: " habitat-proportions )
-    file-print (word   "run; day; pollinator_agent; pollinator_species; plant_patch; plant_species; habitat; habitat_proportions; foraging_distance; ")
+    file-print (word   "run; day; pollinator_agent; pollinator_species; plant_patch; plant_species; habitat; habitat_proportions; foraging_distance;  landscape_type; land-cover-classes; seed-percent")
   ]
   reset-ticks
 end
@@ -302,7 +302,7 @@ to body-mass-dependent-distance
         set max_distance ( exp (5.34 - 1.13 + body_mass * 0.3 ) )
       ]
     )
-    show (word "species: " species " body_mass: " body_mass " fligth_speed: "  flight_speed " max_distance: " max_distance)
+    ;show (word "species: " species " body_mass: " body_mass " fligth_speed: "  flight_speed " max_distance: " max_distance)
   ]
 end
 ;;
@@ -575,7 +575,9 @@ to count-visits
   if generate-output-file [
 
     ;file-print (word species ";" pcolor )
-    file-print (word   behaviorspace-run-number ";" precision day 4 ";" who ";" species ";" patch-here ";" plant_species ";" habitat ";" habitat-proportions ";" foraging_distance)
+    file-print (word   behaviorspace-run-number ";" precision day 4 ";" who ";" species ";" patch-here ";" plant_species ";" habitat ";" habitat-proportions ";"
+      precision foraging_distance 3 ";" landscape_type ";" land-cover-classes ";" seed-percent
+    )
   ]
 end
 
@@ -586,7 +588,7 @@ to-report calculate-habitat-area
   let habitats-numbers (range 1 (land-cover-classes + 1 ) )
   report map [
 
-    h ->  count patches with [ habitat = h ]  / count patches
+    h ->  precision ( count patches with [ habitat = h ]  / count patches ) 3
 
   ] habitats-numbers
 end
@@ -594,11 +596,11 @@ end
 GRAPHICS-WINDOW
 226
 21
-774
-570
+834
+630
 -1
 -1
-5.4
+2.0
 1
 10
 1
@@ -609,9 +611,9 @@ GRAPHICS-WINDOW
 1
 1
 0
-99
+299
 0
-99
+299
 1
 1
 1
@@ -673,8 +675,8 @@ SLIDER
 number-of-pollinators
 number-of-pollinators
 1
-30
-3.0
+100
+30.0
 1
 1
 NIL
@@ -746,10 +748,10 @@ active-search
 -1000
 
 MONITOR
-255
-590
-440
-635
+15
+605
+200
+650
 Mean foraging distance
 mean [ foraging_distance ]  of pollinators
 4
@@ -757,10 +759,10 @@ mean [ foraging_distance ]  of pollinators
 11
 
 MONITOR
-465
-590
-522
-635
+65
+540
+122
+585
 NIL
 day
 2
@@ -787,7 +789,7 @@ number-of-days
 number-of-days
 1
 20
-3.0
+6.0
 1
 1
 NIL
