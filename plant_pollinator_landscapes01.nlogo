@@ -1,9 +1,9 @@
 extensions [ csv palette ]
 
 globals [
-  region-boundaries ; a list of regions definitions, where each region is a list of its min pxcor and max pxcor
-  plant-number
-  day               ; day of the simulation
+  region-boundaries   ; a list of regions definitions, where each region is a list of its min pxcor and max pxcor
+  habitat-proportions ; a list of habitat proportions produced by the landscape generators
+  day                 ; day of the simulation
 
 ]
 
@@ -57,14 +57,22 @@ to setup
   )
   setup-plants
   setup-pollinators
+  set habitat-proportions calculate-habitat-area
 
   if generate-output-file [
     ;let file-name (word "Visits_" substring date-and-time 16 27 "_" substring date-and-time 0 8 ".csv")
     let file-name (word "Simulations/Visits_" substring date-and-time 16 27 "_" substring date-and-time 0 5 "_run_" behaviorspace-run-number ".csv")
 
+    carefully [
+      file-open file-name
+    ][
+      set-current-directory "Simulations"
+      set file-name (word "Visits_" substring date-and-time 16 27 "_" substring date-and-time 0 5 "_run_" behaviorspace-run-number ".csv")
+      file-open file-name
+    ]
+
     print file-name
-    file-open file-name
-    file-print (word   "run; day; pollinator_agent; pollinator_species; plant_patch; plant_species; habitat")
+    file-print (word   "run; day; pollinator_agent; pollinator_species; plant_patch; plant_species; habitat; habitat_proportions; foraging_distance; ")
   ]
   reset-ticks
 end
@@ -281,17 +289,17 @@ to body-mass-dependent-distance
     (ifelse eusocial = 2                                ; highly eusocial
       [
         set flight_speed ( exp (5.34 + body_mass * 0.3) ) / 480
-        set max_distance exp (6.56 + body_mass * 0.33)
+        set max_distance   exp (5.34 + body_mass * 0.3)
       ]
       eusocial = 1
       [
-        set flight_speed ( exp (5.34 + body_mass * ( 0.3 - 1.12) ) ) / 480
-        set max_distance exp (6.56 + body_mass * ( 0.33 - 1.13) )
+        set flight_speed ( exp (5.34 - 1.12 + body_mass *  0.3 ) ) / 480
+        set max_distance ( exp (5.34 - 1.12 + body_mass *  0.3 ) )
       ]
       eusocial = 0
       [
-        set flight_speed ( exp (5.34 + body_mass * ( 0.3 - 1.13) ) ) / 480
-        set max_distance exp (6.56 + body_mass * ( 0.33 - 1.10) )
+        set flight_speed ( exp (5.34 - 1.13 + body_mass * 0.3 ) ) / 480
+        set max_distance ( exp (5.34 - 1.13 + body_mass * 0.3 ) )
       ]
     )
     show (word "species: " species " body_mass: " body_mass " fligth_speed: "  flight_speed " max_distance: " max_distance)
@@ -484,10 +492,12 @@ to move-pollinators
       ]
       set found_plant false
     ][
+      ;
+      ; They detect the plant with max flower_density
 
       let higher-patch max-one-of ( patches in-cone perception_range perception_angle )[flower_density]
       ;
-      ; The detection is imperfect because they detect the max density but not the species at distance, they detect species only when they are in the flower's patch
+      ; then they check if it is in their niche, then they go. If not they continue on a correlated random walk.
 
       ifelse higher-patch != nobody and  member? [ plant_species ] of higher-patch niche_list [
         face higher-patch
@@ -536,8 +546,7 @@ to eat
   if member? plant_species niche_list [
       if flower_density > 0 [
       count-visits
-      ;set energy energy + flower_density * energy_by_distance * 10     ; adds energy proportional to number of flowers in the patch and energy_by_distance
-                                                                       ; maybe we need another parameter for energy_gain
+      ;set energy energy + flower_density * energy_by_distance * 10
       ;show (word "From patch: " patch-here " Energy: " energy " flower_density: " flower_density " niche_list: " niche_list )
       set flower_density flower_density - 1
 
@@ -563,18 +572,30 @@ to count-visits
   if generate-output-file [
 
     ;file-print (word species ";" pcolor )
-    file-print (word   behaviorspace-run-number ";" precision day 4 ";" who ";" species ";" patch-here ";" plant_species ";" habitat )
+    file-print (word   behaviorspace-run-number ";" precision day 4 ";" who ";" species ";" patch-here ";" plant_species ";" habitat ";" habitat-proportions ";" foraging_distance)
   ]
+end
+
+;
+; Calculate the proportion of each habitat
+;
+to-report calculate-habitat-area
+  let habitats-numbers (range 1 (land-cover-classes + 1 ) )
+  report map [
+
+    h ->  count patches with [ habitat = h ]  / count patches
+
+  ] habitats-numbers
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
 226
 21
-634
-430
+774
+570
 -1
 -1
-4.0
+5.4
 1
 10
 1
@@ -619,8 +640,8 @@ SLIDER
 seed-percent
 seed-percent
 0.001
-0.02
-0.004
+1
+0.001
 0.001
 1
 NIL
@@ -691,7 +712,7 @@ CHOOSER
 landscape_type
 landscape_type
 "Regular" "Random natural" "Image"
-0
+1
 
 BUTTON
 10
@@ -722,10 +743,10 @@ active-search
 -1000
 
 MONITOR
-225
-470
-410
-515
+255
+590
+440
+635
 Mean foraging distance
 mean [ foraging_distance ]  of pollinators
 4
@@ -733,10 +754,10 @@ mean [ foraging_distance ]  of pollinators
 11
 
 MONITOR
-435
-470
-492
-515
+465
+590
+522
+635
 NIL
 day
 2
@@ -1148,10 +1169,12 @@ NetLogo 6.2.0
       <value value="4"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="landscape_type">
-      <value value="&quot;Regular&quot;"/>
+      <value value="&quot;Random natural&quot;"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="seed-percent">
       <value value="0.004"/>
+      <value value="0.1"/>
+      <value value="1"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="number-of-days">
       <value value="3"/>

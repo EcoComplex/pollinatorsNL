@@ -29,10 +29,14 @@ theme_set(theme_bw())
 #
 system("bash netlogo-headless-exp.sh")
 
-simul_fn <- list.files(path="Simulations",pattern="^Visits_21-May-2021_06:31.*csv")
+simul_fn <- list.files(path="Simulations",pattern="^Visits.*csv")
 
 mdl <- lapply( simul_fn, function(x){ read_delim(paste0("Simulations/",x),";") })
 
 mdl <- bind_rows(mdl)
+names(mdl) <- str_trim(names(mdl))
+
+mdl %>% group_by(pollinator_species) %>% summarize(foraging_distance = mean(foraging_distance) )
+
 ```
 
