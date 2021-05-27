@@ -60,17 +60,13 @@ to setup
   set habitat-proportions calculate-habitat-area
 
   if generate-output-file [
-    ;let file-name (word "Visits_" substring date-and-time 16 27 "_" substring date-and-time 0 8 ".csv")
-    let file-name (word "Simulations/Visits_" substring date-and-time 16 27 "_" substring date-and-time 0 5 "_run_" behaviorspace-run-number ".csv")
 
-    carefully [
-      file-open file-name
-    ][
-      set-current-directory "Simulations"
-      set file-name (word "Visits_" substring date-and-time 16 27 "_" substring date-and-time 0 5 "_run_" behaviorspace-run-number ".csv")
-      file-open file-name
-    ]
+    let hstime remove-item 2 ( substring date-and-time 0 5 )
+    let file-name (word "Simulations/Visits_" substring date-and-time 16 27 "_" hstime "_run_" behaviorspace-run-number ".csv")
 
+    ;let file-name (word "Simulations/Visits_" substring date-and-time 16 27 "_" substring date-and-time 0 5 "_run_" behaviorspace-run-number ".csv")
+
+    file-open file-name
     print (word file-name " - habitat proportions: " habitat-proportions )
     file-print (word   "run; day; pollinator_agent; pollinator_species; plant_patch; plant_species; habitat; habitat_proportions; foraging_distance;  landscape_type; land-cover-classes; seed-percent")
   ]
