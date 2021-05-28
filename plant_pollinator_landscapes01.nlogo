@@ -298,7 +298,9 @@ to body-mass-dependent-distance
         set max_distance ( exp (5.34 - 1.13 + body_mass * 0.3 ) )
       ]
     )
-    ;show (word "species: " species " body_mass: " body_mass " fligth_speed: "  flight_speed " max_distance: " max_distance)
+    set flight_speed precision flight_speed 1
+    set max_distance precision max_distance 1
+    show (word "species: " species " body_mass: " body_mass " fligth_speed: "  flight_speed " max_distance: " max_distance)
   ]
 end
 ;;
@@ -306,7 +308,7 @@ end
 ;;
 to eusociality-setup
   let max-species max [species] of pollinators
-  let sp-list (range 1 max-species)
+  let sp-list (range 1 ( max-species + 1))
   foreach sp-list [ sp ->
     let sp-pollinator one-of pollinators with [sp = species and eusocial > 0 ]
     if sp-pollinator != nobody  [
@@ -330,7 +332,7 @@ to eusociality-setup
       ][ ;; eusocial = 1 solitary species
         let eu-pollinators pollinators with [sp = species and eusocial = 1 ]
 
-        if eu-pollinators != nobody  [
+        if any? eu-pollinators  [
           ask eu-pollinators [
             let ne-habitat [nest_habitat] of sp-pollinator
             let nest-patch one-of patches with [ habitat = ne-habitat ]
@@ -447,7 +449,7 @@ end
 to return-all-pollinators
   ask pollinators [
     ifelse eusocial > 0 [
-      ;show word "End of day on_nest: " on_nest
+      ;show (word "End of day on_nest: " on_nest " Nest: " nest )
 
       ifelse on_nest = 0 [
         set foraging_distance 0
@@ -672,7 +674,7 @@ number-of-pollinators
 number-of-pollinators
 1
 100
-30.0
+10.0
 1
 1
 NIL
