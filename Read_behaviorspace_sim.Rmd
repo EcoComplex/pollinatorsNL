@@ -33,7 +33,7 @@ simul_fn <- list.files(path="Simulations",pattern="^Visits.*csv")
 
 # Read all simulations in simul_fn
 #
-mdl <- lapply( simul_fn, function(x){ read_delim(paste0("Simulations/",x),";") })
+mdl <- lapply( simul_fn, function(x){ read_delim(paste0("Simulations/",x),";") %>% mutate(filename=x) })
 
 mdl <- bind_rows(mdl)
 
@@ -48,8 +48,8 @@ names(mdl) <- str_trim(names(mdl))
 # sp 5 fligth_speed: 1.4 max_distance: 170.4"
 # sp 6 fligth_speed: 2.4 max_distance: 682.3"
 
-mdl %>% group_by(pollinator_species) %>% summarize(foraging_distance = max(foraging_distance) ) %>% mutate(flight_speed= "add1")
-tt <- bind_rows(tt, mdl %>% group_by(pollinator_species) %>% summarize(foraging_distance = mean(foraging_distance) ) %>% mutate(flight_speed= "add1"))
+mdl %>% group_by(filename,pollinator_species) %>% summarize(foraging_distance = max(foraging_distance) ) 
+mdl %>% group_by(filename,pollinator_species) %>% summarize(foraging_distance = mean(foraging_distance) ) 
 
 
 ```
