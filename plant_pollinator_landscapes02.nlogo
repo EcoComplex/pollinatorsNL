@@ -1,4 +1,4 @@
-extensions [ csv palette ]
+extensions [ csv palette vid ]
 
 globals [
   region-boundaries   ; a list of regions definitions, where each region is a list of its min pxcor and max pxcor
@@ -69,6 +69,12 @@ to setup
     file-open file-name
     print (word file-name " - habitat proportions: " habitat-proportions )
     file-print (word   "run; day; pollinator_agent; pollinator_species; plant_patch; plant_species; habitat; habitat_proportions; foraging_distance;  landscape_type; land-cover-classes; seed-percent")
+  ]
+  if video [
+     vid:reset-recorder
+     vid:start-recorder
+  ;        ; vid:record-interface
+     vid:record-view
   ]
   reset-ticks
 end
@@ -301,7 +307,7 @@ to body-mass-dependent-distance
     )
     set flight_speed precision flight_speed 1
     set max_distance precision max_distance 1
-    show (word "species: " species " body_mass: " body_mass " fligth_speed: "  flight_speed " max_distance: " max_distance)
+    ;show (word "species: " species " body_mass: " body_mass " fligth_speed: "  flight_speed " max_distance: " max_distance)
   ]
 end
 ;;
@@ -414,9 +420,17 @@ to replenish-flowers
   ask patches with [ plant_species != 0 ][
 
     set flower_density random ( flower_max - flower_min + 1 ) + flower_min
-    ;show (word "Plant species: " plant_species " habitat: " habitat " Flower_density: " flower_density)
+    ;show (word "Plant species: " plant_species " habitat: " habitat " Flower_density: " flower_density " pcolor:" pcolor )
+    paint-flower-density    ;show (word "After pcolor:" pcolor )
+
 
   ]
+end
+
+to paint-flower-density
+    set pcolor palette:scale-gradient palette:scheme-colors "Divergent" "RdYlGn" 9 plant_species 0 10   ;; Color assumes 10 plant species
+
+    set pcolor map [ i -> flower_density / flower_max * i  ] pcolor
 end
 
 to go
@@ -429,6 +443,10 @@ to go
 
   if not any? pollinators or day = number-of-days [               ; 480 ticks per day
     file-close
+    if video [
+        vid:save-recording "pollinators02.mp4"
+    ]
+
     stop
   ]
 
@@ -438,13 +456,19 @@ to go
     eat
     death
   ]
-
-  ;ask patches with [pcolor != white] [
-
+  ;ask patches with [ plant_species != 0 ]
+  ;[
+  ;  paint-flower-density
     ;patch-flowering
-
   ;]
+
+
   tick
+  if video [
+        ;vid:record-interface
+     vid:record-view
+  ]
+
 end
 
 to return-all-pollinators
@@ -788,7 +812,7 @@ number-of-days
 number-of-days
 1
 20
-1.0
+2.0
 1
 1
 NIL
@@ -870,6 +894,17 @@ mean [ foraging_distance ]  of pollinators with [ species = 6]
 17
 1
 11
+
+SWITCH
+875
+330
+978
+363
+Video
+Video
+1
+1
+-1000
 
 @#$#@#$#@
 ## WHAT IS IT?
