@@ -19,7 +19,7 @@ patches-own[
   flower_density       ;; More density more attractive to pollinatiors a proxy of energy available
   flower_max
   flower_min           ;; Parameters to replenish the plant each day
-
+  pollinators_weigth   ;; flower_density * niche_preferences
 ]
 
 ;;
@@ -33,6 +33,7 @@ pollinators-own [
   flight_speed
   stdev_angle           ; Correlated random walk
   niche_list            ; plants that the pollinators pollinates
+  niche_preferences     ; Preferences, list of probabilities must sum 1
   max_distance          ;
   perception_angle
   perception_range
@@ -260,21 +261,28 @@ to setup-pollinators
 
       let niche_str      item 4 pollinator_data         ; Niche = which plants the pollinator can pollinate - represent traits like open/closed flowers
       set niche_list read-from-string niche_str
-      ;show (word "niche_list: " niche_list)
+      let niche_str1      item 5 pollinator_data
+      set niche_preferences read-from-string niche_str1
+      if length niche_list != length niche_preferences [
+        print (word "ERROR: Pollinator sp " species " doesn't have the same number of niche items and preferences")
+        show (word "niche_list: " niche_list " niche_preferences: " niche_preferences)
+        stop
+      ]
+      ;show (word "niche_list: " niche_list " niche_preferences: " niche_preferences)
 
-      set nest_habitat       item 5 pollinator_data     ; The habitat where the nest is
-      set max_distance item 6 pollinator_data           ; max distance a pollinator flies before return to nest, if body_mass >0 set from Liam's model
+      set nest_habitat     item 6 pollinator_data     ; The habitat where the nest is
+      set max_distance     item 7 pollinator_data           ; max distance a pollinator flies before return to nest, if body_mass >0 set from Liam's model
       ;set energy energy_by_distance * 100                   ; initial amount of energy
 
-      set perception_range item 7 pollinator_data
-      set perception_angle item 8 pollinator_data
+      set perception_range item 8 pollinator_data
+      set perception_angle item 9 pollinator_data
                                                             ; Should add memory_extinction 1/480 = 1 Day
                                                             ; last_found_patch to signal the last plant they found and to communicate
                                                             ; to other pollinators in nest.
 
-      set body_mass      item 9 pollinator_data             ; Not needed unless we parametrize from body_mass
-      set size           item 10 pollinator_data
-      set color          item 11 pollinator_data
+      set body_mass      item 10 pollinator_data             ; Not needed unless we parametrize from body_mass
+      set size           item 11 pollinator_data
+      set color          item 12 pollinator_data
       set adaptative_step 0
       set found_plant     false
 
@@ -519,22 +527,37 @@ to move-pollinators
       set found_plant false
     ][
       ;
-      ; They detect the plant with max flower_density
-
-      let higher-patch max-one-of ( patches in-cone perception_range perception_angle )[flower_density]
+      ; Detect the max flower_density of plants in the niche
       ;
-      ; then they check if it is in their niche, then they go. If not they continue on a correlated random walk.
+      let highest-list map [x  ->  max-one-of ( patches with [plant_species = x ] in-cone perception_range perception_angle )[flower_density] ] niche_list
+      ;print (word "highest-list: "  highest-list )
 
-      ifelse higher-patch != nobody and  member? [ plant_species ] of higher-patch niche_list [
+      ;
+      ; Then weigth by preferences
+      ;
+      let highest-patch  patch-set highest-list
+      ifelse any? highest-patch [
+        ;print (word "Niche_preferences: " Niche_preferences )
+        let np niche_preferences
+        let nl niche_list
+        ask highest-patch  [
+          let pos_np position plant_species nl
+          let pw item pos_np np
+          set pollinators_weigth pw * flower_density
+          ;show (word "Niche preference: " pw " pollinators_weigth: " pollinators_weigth " flower_density: " flower_density)
+        ]
+        let higher-patch max-one-of highest-patch [pollinators_weigth ]
+        ;print (word "Higher patch: " [pollinators_weigth ] of higher-patch )
+
         face higher-patch
         set adaptative_step distance higher-patch
         move-to higher-patch
         set found_plant true
 
         ;show (word "Found plant move to higher patch " higher-patch )
-        ;print (word "Is in niche " [plant_species] of higher-patch " Adaptative_step: " adaptative_step  )
       ][
         correlated-random-walk
+        ;show "Not found plant correlated random walk"
       ]
       ; @Benadi2018 If no flowers are within the pollinator’s perception range, it moves in a correlated random walk
       ; (with turning angles drawn from a normal distribution with mean 0 and standard deviation j) until it perceives at least one flower.
@@ -566,8 +589,8 @@ end
 ;
 to eat
   ;if is-flowering = TRUE [
-  let total_flowers 0
-  let p_niche niche_list
+  ;let total_flowers 0
+  ;let p_niche niche_list
   ;print (word "Plant sp: " species " niche_list: " p_niche "Flower_density: " flower_density)
   if member? plant_species niche_list [
       if flower_density > 0 [
@@ -699,7 +722,7 @@ number-of-pollinators
 number-of-pollinators
 1
 100
-10.0
+3.0
 1
 1
 NIL
