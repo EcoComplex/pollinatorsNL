@@ -20,9 +20,9 @@ patches-own[
   habitat              ; to set number of habitats
   plant_species        ; to set number of plant types
   flower_density       ; Higher flower density makes a plant more attractive to pollinatiors. It is a proxy of energy availability
-  flower_max
-  flower_min           ; Parameters to replenish the plant each day
-  pollinators_weight   ; flower_density * niche_preferences
+  flower_max           ; Parameters to replenish the flower_density each day with a random number between flower_min and flower_max
+  flower_min           ; 
+  pollinators_weight   ; auxiliar variable to determine pollinators preferences: flower_density * niche_preferences
 ]
 
 ;;
@@ -38,7 +38,7 @@ pollinators-own [
   stdev_angle           ; variable used for correlated random walk
   niche_list            ; list of plants that the pollinators pollinate
   niche_preferences     ; Pollinator plant preferences. A list of probabilities that must sum to 1
-  max_distance          ; are we using this one?
+  max_distance          ; Max distance eusocial pollinators forage before returning to nest
   perception_angle      ; the angle degrees a pollinator perceive plants
   perception_range      ; how many patches can a pollinator sense plants
   body_mass             ; body masses of species, here given as interregular distance (ITD)
@@ -418,9 +418,7 @@ to setup-plants
         set plant_species plant_sp
         set flower_max sp_flower_max
         set flower_min sp_flower_min
-        ;set flower_density random ( flower_max - flower_min + 1 ) + flower_min
         ;show (word "Plant species: " plant_sp " habitat: " h " Plant density: " density " Flower_density: " flower_density)
-        ;set pcolor pcolor - plant_sp / 2 * h
         set pcolor palette:scale-gradient palette:scheme-colors "Divergent" "RdYlGn" 9 plant_sp 0 10   ;; Color assumes 10 plant species
       ]
     ]
@@ -441,7 +439,8 @@ to replenish-flowers
 end
 
 to paint-flower-density
-    set pcolor palette:scale-gradient palette:scheme-colors "Divergent" "RdYlGn" 9 plant_species 0 10   ;; Color assumes 10 plant species
+    set pcolor palette:scale-gradient palette:scheme-colors "Divergent" "RdYlGn" 9 plant_species 0 10   ;; Color assumes max 10 plant species
+
     set pcolor map [ i -> flower_density / flower_max * i  ] pcolor
 end
 
