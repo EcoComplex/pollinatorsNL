@@ -651,7 +651,7 @@ to-report calculate-mean-free-path
 
     ]
     ;print (word "Habitat: " h " Mfp: " (mean list-mfp))
-    set mfp-habitat lput mean list-mfp mfp-habitat
+    set mfp-habitat lput precision mean list-mfp 3 mfp-habitat
   ]
   report mfp-habitat
 end
