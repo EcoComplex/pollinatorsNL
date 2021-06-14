@@ -1,8 +1,5 @@
-;; Model designed by Leonardo Saravia and Susanne Kortsch
-
 extensions [ csv palette vid ]
 
-;; global variables are accessible by all agents and can be used anywhere in a model
 globals [
   region-boundaries   ; a list of regions definitions, where each region is a list of its min pxcor and max pxcor
   habitat-proportions ; a list of habitat proportions produced by the landscape generators
@@ -10,40 +7,40 @@ globals [
 
 ]
 
-;; the variable "breed" holds the agentset of the pollinators
 breed [ pollinators pollinator ]
 
-;; patches contain one plant type/species
+;; patches have 1 species of plants
 ;; patch variables have underscores
+;;
 patches-own[
-  number_of_visits     ; to count number of pollinator visits to plants
-  habitat              ; to set number of habitats
-  plant_species        ; to set number of plant types
-  flower_density       ; Higher flower density makes a plant more attractive to pollinatiors. It is a proxy of energy availability
-  flower_max           ; Parameters to replenish the flower_density each day with a random number between flower_min and flower_max
-  flower_min           ; 
-  pollinators_weight   ; auxiliar variable to determine pollinators preferences: flower_density * niche_preferences
+  number_of_visits
+  habitat
+  plant_species
+  flower_density       ;; More density more attractive to pollinatiors a proxy of energy available
+  flower_max           ;; Parameters to replenish the flower_density each day with a random number between flower_min and flower_max
+  flower_min           ;;
+  pollinators_weigth   ;; auxiliar variable to determine pollinators preferences: flower_density * niche_preferences,
 ]
 
 ;;
-;; pollinators variables
-;; variable names have underscores
+;; pollinators variables have underscores
 
 pollinators-own [
   species
-  eusocial              ; is a eusocial species?
-  nest_habitat          ; in which habitat a nest is located
-  nest                  ; the nest patch
-  flight_speed          ; flight speed is based on allometric scaling relationships
-  stdev_angle           ; variable used for correlated random walk
-  niche_list            ; list of plants that the pollinators pollinate
-  niche_preferences     ; Pollinator plant preferences. A list of probabilities that must sum to 1
+  eusocial               ; is a eusocial species?
+  nest_habitat           ;
+  nest                   ; the nest patch
+  flight_speed
+  stdev_angle           ; Correlated random walk
+  niche_list            ; plants that the pollinators pollinates
+  niche_preferences     ; Preferences, list of probabilities must sum 1
   max_distance          ; Max distance eusocial pollinators forage before returning to nest
-  perception_angle      ; the angle degrees a pollinator perceive plants
-  perception_range      ; how many patches can a pollinator sense plants
-  body_mass             ; body masses of species, here given as interregular distance (ITD)
-  foraging_distance     ; max forgaing distance is based on allometric scaling relationships
-  adaptative_step       ; used to calculate distance travelled
+  perception_angle
+  perception_range
+
+  body_mass
+  foraging_distance
+  adaptative_step       ; distance travelled
   found_plant           ; found a plant to pollinate
   on_nest               ; pollinator is on nest
 ]
@@ -55,9 +52,9 @@ to setup
 
   (ifelse
 
-    landscape_type = "Regular"        [ setup-landscape_1 ] ; can be divided into 16 or 25 areas
-    landscape_type = "Random natural" [ setup-landscape_2 ] ; landcsape algorithm to create more natural looking landscapes
-    landscape_type = "Image"          [ setup-landscape_3 ] ; can be used to import real-world images to create landcsapes
+    landscape_type = "Regular"        [ setup-landscape_1 ];divided into 16 or 25 areas ]
+    landscape_type = "Random natural" [ setup-landscape_2 ]
+    landscape_type = "Image"          [ setup-landscape_3 ]
   )
   setup-plants
   setup-pollinators
@@ -74,8 +71,6 @@ to setup
     print (word file-name " - habitat proportions: " habitat-proportions )
     file-print (word   "run; day; pollinator_agent; pollinator_species; plant_patch; plant_species; habitat; habitat_proportions; foraging_distance;  landscape_type; land-cover-classes; seed-percent")
   ]
-
- ;; to record a video of the simulation
   if video [
      vid:reset-recorder
      vid:start-recorder
@@ -204,26 +199,11 @@ to setup-landscape_2
 
 end
 
-;SHOULD WE DELETE THIS SCENARIO THING???? WE ARE NOT USING IT!
-;;; make landscape_2_scenarios
-to make-landscape_2_scenarios
-
-  if landscape_2_scenarios = "heterogenous" [
-    set land-cover-classes 4
-    set seed-percent 1 ]
-
-  if landscape_2_scenarios = "intermediate-complexity" [
-    set land-cover-classes 4
-    set seed-percent 0.01 ]
-
-  if landscape_2_scenarios = "homogenous" [
-    set land-cover-classes 4
-    set seed-percent 0.0004 ]
-
-end
 
 
-;;; to setup real world landscapes from images
+
+;;; to setup real world landscape, here we could also have three examples from Nepali landscapes
+; I will ask Tom Timberlake to make three gis renderings for us with color-coded habitats where we can add the plants and flowers
 to setup-landscape_3
  ;import-drawing "Chickwell Farm.png"
  import-pcolors "Chickwell Farm.png"
@@ -273,9 +253,9 @@ to setup-pollinators
       ]
       ;show (word "niche_list: " niche_list " niche_preferences: " niche_preferences)
 
-      set nest_habitat     item 6 pollinator_data           ; The habitat where the nest is
+      set nest_habitat     item 6 pollinator_data     ; The habitat where the nest is
       set max_distance     item 7 pollinator_data           ; max distance a pollinator flies before return to nest, if body_mass >0 set from Liam's model
-      ;set energy energy_by_distance * 100                  ; initial amount of energy
+      ;set energy energy_by_distance * 100                   ; initial amount of energy
 
       set perception_range item 8 pollinator_data
       set perception_angle item 9 pollinator_data
@@ -283,35 +263,34 @@ to setup-pollinators
                                                             ; last_found_patch to signal the last plant they found and to communicate
                                                             ; to other pollinators in nest.
 
-      set body_mass      item 10 pollinator_data            ; Not needed unless we parametrize from body_mass
+      set body_mass      item 10 pollinator_data             ; Not needed unless we parametrize from body_mass
       set size           item 11 pollinator_data
       set color          item 12 pollinator_data
       set adaptative_step 0
       set found_plant     false
 
-      body-mass-dependent-distance                          ; setup parameters when body_mass > 0
+      body-mass-dependent-distance                       ; setup parameters when body_mass > 0
     ]
   ]
 
   file-close ; make sure to close the file
 
-    eusociality-setup
+  eusociality-setup
 end
 
-;; Parametrize flight_speed and max_distance using Liam's model
 to body-mass-dependent-distance
-  if body_mass > 0 [
-    (ifelse eusocial = 2                                              ; highly eusocial, e.g. honey bees
+  if body_mass > 0 [                                  ; Parametrize flight_speed and max_distance using Liam's model
+    (ifelse eusocial = 2                                ; highly eusocial
       [
-        set flight_speed ( exp (5.34 + body_mass * 0.3) * 10 ) / 480  ;we multiply with 10, because pollinators do around 5 to 15 foraging trips per day, on average ~10
+        set flight_speed ( exp (5.34 + body_mass * 0.3) * 10 ) / 480 ;pollinators do around 5 to 15 foraging trips per day ~10
         set max_distance   exp (5.34 + body_mass * 0.3)
       ]
-      eusocial = 1                                                    ; primitively eusocial, e.g. bumble bees
+      eusocial = 1
       [
         set flight_speed ( exp (5.34 - 1.12 + body_mass *  0.3 ) * 10 ) / 480
         set max_distance ( exp (5.34 - 1.12 + body_mass *  0.3 ) )
       ]
-      eusocial = 0                                                     ; solitary bees
+      eusocial = 0
       [
         set flight_speed ( exp (5.34 - 1.13 + body_mass * 0.3 ) * 10 ) / 480
         set max_distance ( exp (5.34 - 1.13 + body_mass * 0.3 ) )
@@ -323,7 +302,7 @@ to body-mass-dependent-distance
   ]
 end
 ;;
-;; Set nest sites for eusocial and solitary pollinators pollinators
+;; Set nest sites for eusocial pollinators
 ;;
 to eusociality-setup
   let max-species max [species] of pollinators
@@ -402,7 +381,7 @@ to setup-plants
     let density_list read-from-string density_str
 
     let i 0
-    ; for each habitat set the plants according to the plant-density for each habitat
+    ; for each habitat set the plants
     foreach habitat_list [ h ->
       ;
       let density item i density_list
@@ -411,7 +390,6 @@ to setup-plants
       set npatches npatches * density
       ;print (word "Species: " plant_sp " patches: " npatches )
 
-      ; for each habitat with a given plant-density fill patches with flowers
       set i i + 1
       ask n-of npatches patches with [habitat = h and plant_species = 0] [
 
@@ -448,7 +426,7 @@ to go
 
   set day ( ticks / 480 )
   if ( int day ) = day [                              ; replenish-flowers first time and then at the end of the day
-
+    replenish-flowers
     return-all-pollinators
   ]
 
@@ -491,7 +469,7 @@ to return-all-pollinators
         set foraging_distance 0
         move-to nest
       ][
-        set on_nest 0                                              ; after the night they don't wait but start pollinating immdiately
+        set on_nest 0                                              ; after the night they don't wait and start pollination
       ]
     ][
       set foraging_distance 0
@@ -506,7 +484,7 @@ end
 ;; if the plant is in their niche they face the plant and move to the patch
 ;;
 to move-pollinators
-  ifelse on_nest > 0 [                                              ; Resting on the nest the amount of time it takes to fly back from max foraging distance
+  ifelse on_nest > 0 [                                              ; Resting on the nest the amount of time if they should flight foraging_distance back
     set  on_nest on_nest - 1
     set foraging_distance 0
     ;show (word "Decrement on_nest: " on_nest)
@@ -515,7 +493,7 @@ to move-pollinators
     ifelse found_plant or not active-search [
       ;show (word "Found plant in previous tick:  " adaptative_step  )
       ifelse eusocial > 0 [
-        ifelse foraging_distance > max_distance                     ; if pollinators reach max flight distance they go back to their nest and stay there the amount of time it would have taken to fly back given their flight speed
+        ifelse foraging_distance > max_distance                     ; After max distance they go nest and stay there until foraging_distance/ flight_speed steps
         [
           move-to nest
           set on_nest int ( foraging_distance / flight_speed )
@@ -536,9 +514,9 @@ to move-pollinators
       ;print (word "highest-list: "  highest-list )
 
       ;
-      ; Weight by plants by pollinator preferences
+      ; Then weigth by preferences
       ;
-      let highest-patch patch-set highest-list
+      let highest-patch  patch-set highest-list
       ifelse any? highest-patch [
         ;print (word "Niche_preferences: " Niche_preferences )
         let np niche_preferences
@@ -546,11 +524,11 @@ to move-pollinators
         ask highest-patch  [
           let pos_np position plant_species nl
           let pw item pos_np np
-          set pollinators_weight pw * flower_density
-          ;show (word "Niche preference: " pw " pollinators_weight: " pollinators_weight " flower_density: " flower_density)
+          set pollinators_weigth pw * flower_density
+          ;show (word "Niche preference: " pw " pollinators_weigth: " pollinators_weigth " flower_density: " flower_density)
         ]
-        let higher-patch max-one-of highest-patch [pollinators_weight ]
-        ;print (word "Higher patch: " [pollinators_weight ] of higher-patch )
+        let higher-patch max-one-of highest-patch [pollinators_weigth ]
+        ;print (word "Higher patch: " [pollinators_weigth ] of higher-patch )
 
         face higher-patch
         set adaptative_step distance higher-patch
@@ -562,7 +540,7 @@ to move-pollinators
         correlated-random-walk
         ;show "Not found plant correlated random walk"
       ]
-      ; credit: @Benadi_2018 If no flowers are within the pollinator’s perception range, it moves in a correlated random walk
+      ; @Benadi2018 If no flowers are within the pollinator’s perception range, it moves in a correlated random walk
       ; (with turning angles drawn from a normal distribution with mean 0 and standard deviation j) until it perceives at least one flower.
     ]
 
@@ -688,9 +666,9 @@ NIL
 
 SLIDER
 875
-70
+125
 1047
-103
+158
 seed-percent
 seed-percent
 0.00001
@@ -718,28 +696,18 @@ HORIZONTAL
 
 SLIDER
 875
-220
+170
 1045
-253
+203
 number-of-pollinators
 number-of-pollinators
 1
 100
-8.0
+3.0
 1
 1
 NIL
 HORIZONTAL
-
-CHOOSER
-875
-110
-1045
-155
-landscape_2_scenarios
-landscape_2_scenarios
-"heterogenous" "intermediate-complexity" "homogenous"
-0
 
 BUTTON
 15
@@ -760,9 +728,9 @@ NIL
 
 CHOOSER
 875
-165
+70
 1045
-210
+115
 landscape_type
 landscape_type
 "Regular" "Random natural" "Image"
@@ -831,9 +799,9 @@ generate-output-file
 
 SLIDER
 875
-265
+215
 1045
-298
+248
 number-of-days
 number-of-days
 1
