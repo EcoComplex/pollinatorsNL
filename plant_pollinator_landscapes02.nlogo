@@ -68,7 +68,7 @@ to setup
     ;let file-name (word "Simulations/Visits_" substring date-and-time 16 27 "_" substring date-and-time 0 5 "_run_" behaviorspace-run-number ".csv")
 
     file-open file-name
-    print (word file-name " - habitat proportions: " habitat-proportions )
+    print (word file-name " - habitat proportions: " habitat-proportions " Mean free habitat path: " calculate-mean-free-path)
     file-print (word   "run; day; pollinator_agent; pollinator_species; plant_patch; plant_species; habitat; habitat_proportions; foraging_distance;  landscape_type; land-cover-classes; seed-percent")
   ]
   if video [
@@ -619,6 +619,42 @@ to-report calculate-habitat-area
 
   ] habitats-numbers
 end
+
+
+; Calculate the mean free habitat path:  is the mean
+; distance from a randomly chosen site of an habitat to
+; the closest diferent habitat.
+;
+to-report calculate-mean-free-path
+  let habitats (range 1 (land-cover-classes + 1 ) )
+  let no_hab map [
+
+    h ->  count patches with [ habitat = h ] * 0.2         ;  it uses the 20% of the total sites to calculate the mean
+  ] habitats
+  let mfp-habitat []
+  ;print (word "Habitat patches: " no_hab)
+  foreach habitats [
+
+    h ->
+      let list-mfp []
+      ask n-of (item (h - 1)  no_hab)  patches with [ habitat = h ] [
+      let i 0
+      let p-in-r no-patches
+      while [not any? p-in-r] [
+        set i i + 1
+        set p-in-r patches with [habitat != h ] in-radius i
+        ;print (word "p-in-r" p-in-r " i: " i)
+
+      ]
+      ;show (word "Habitat: " h " radius: " i )
+      set list-mfp lput i list-mfp
+
+    ]
+    ;print (word "Habitat: " h " Mfp: " (mean list-mfp))
+    set mfp-habitat lput mean list-mfp mfp-habitat
+  ]
+  report mfp-habitat
+end
 @#$#@#$#@
 GRAPHICS-WINDOW
 226
@@ -627,7 +663,7 @@ GRAPHICS-WINDOW
 630
 -1
 -1
-2.0
+6.0
 1
 10
 1
@@ -638,9 +674,9 @@ GRAPHICS-WINDOW
 1
 1
 0
-299
+99
 0
-299
+99
 1
 1
 1
@@ -673,7 +709,7 @@ seed-percent
 seed-percent
 0.00001
 1
-0.001
+1.0E-5
 0.001
 1
 NIL
