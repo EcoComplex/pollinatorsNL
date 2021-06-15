@@ -1,4 +1,4 @@
-extensions [ csv palette vid ]
+extensions [ csv palette vid profiler]
 
 globals [
   region-boundaries   ; a list of regions definitions, where each region is a list of its min pxcor and max pxcor
@@ -65,10 +65,15 @@ to setup
     let hstime remove-item 2 ( substring date-and-time 0 5 )
     let file-name (word "Simulations/Visits_" substring date-and-time 16 27 "_" hstime "_run_" behaviorspace-run-number ".csv")
 
-    ;let file-name (word "Simulations/Visits_" substring date-and-time 16 27 "_" substring date-and-time 0 5 "_run_" behaviorspace-run-number ".csv")
+    file-open "Simulations/Run_habitat_parameters.csv"
+
+    ;file-print (word   "filename; land-cover-classes; seed-percent; habitat_proportions; Mean-free-habitat-path")
+    file-print (word   file-name ";" land-cover-classes ";" seed-percent ";" habitat-proportions ";" calculate-mean-free-path)
+    file-close
+
 
     file-open file-name
-    print (word file-name " - habitat proportions: " habitat-proportions " Mean free habitat path: " calculate-mean-free-path)
+    print (word file-name " - habitat proportions: " habitat-proportions )
     file-print (word   "run; day; pollinator_agent; pollinator_species; plant_patch; plant_species; habitat; habitat_proportions; foraging_distance;  landscape_type; land-cover-classes; seed-percent")
   ]
   if video [
@@ -601,7 +606,6 @@ to count-visits
   ;;
   if generate-output-file [
 
-    ;file-print (word species ";" pcolor )
     file-print (word   behaviorspace-run-number ";" precision day 4 ";" who ";" species ";" patch-here ";" plant_species ";" habitat ";" habitat-proportions ";"
       precision foraging_distance 3 ";" landscape_type ";" land-cover-classes ";" seed-percent
     )
@@ -629,15 +633,17 @@ to-report calculate-mean-free-path
   let habitats (range 1 (land-cover-classes + 1 ) )
   let no_hab map [
 
-    h ->  count patches with [ habitat = h ] * 0.2         ;  it uses the 20% of the total sites to calculate the mean
+    h ->  count patches with [ habitat = h ] * 0.1         ;  it uses the 20% of the total sites to calculate the mean
   ] habitats
   let mfp-habitat []
-  ;print (word "Habitat patches: " no_hab)
+  print (word "Habitat patches: " no_hab)
   foreach habitats [
 
     h ->
-      let list-mfp []
-      ask n-of (item (h - 1)  no_hab)  patches with [ habitat = h ] [
+    let list-mfp []
+    let nh item (h - 1)  no_hab
+    if nh > 100 [ set nh 100 ]
+    ask n-of nh  patches with [ habitat = h ] [
       let i 0
       let p-in-r no-patches
       while [not any? p-in-r] [
@@ -663,7 +669,7 @@ GRAPHICS-WINDOW
 630
 -1
 -1
-6.0
+2.0
 1
 10
 1
@@ -674,9 +680,9 @@ GRAPHICS-WINDOW
 1
 1
 0
-99
+299
 0
-99
+299
 1
 1
 1
@@ -709,7 +715,7 @@ seed-percent
 seed-percent
 0.00001
 1
-1.0E-5
+1.0E-4
 0.001
 1
 NIL
@@ -935,6 +941,23 @@ Video
 1
 1
 -1000
+
+BUTTON
+15
+685
+97
+718
+Profiler
+profiler:start         ;; start profiling\nrepeat 2 [ show calculate-mean-free-path ]       ;; run something you want to measure\nprofiler:stop          ;; stop profiling\nprint profiler:report  ;; view the results\nprofiler:reset         ;; clear the data
+NIL
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
 
 @#$#@#$#@
 ## WHAT IS IT?
