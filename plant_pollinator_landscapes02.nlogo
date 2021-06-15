@@ -636,7 +636,7 @@ to-report calculate-mean-free-path
     h ->  count patches with [ habitat = h ] * 0.1         ;  it uses the 20% of the total sites to calculate the mean
   ] habitats
   let mfp-habitat []
-  print (word "Habitat patches: " no_hab)
+  ;print (word "Habitat patches: " no_hab)
   foreach habitats [
 
     h ->
