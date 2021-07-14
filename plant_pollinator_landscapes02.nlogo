@@ -1,9 +1,10 @@
-extensions [ csv palette vid profiler]
+extensions [ csv palette vid profiler ]
 
 globals [
   region-boundaries   ; a list of regions definitions, where each region is a list of its min pxcor and max pxcor
   habitat-proportions ; a list of habitat proportions produced by the landscape generators
   day                 ; day of the simulation
+  pollinators_number_list     ; list with number of pollinators to setup
 
 ]
 
@@ -218,7 +219,6 @@ end
 ; procedure to read pollinators parameters from a file
 ;
 to setup-pollinators
-
   file-close-all ; close all open files
   if not file-exists? "pollinator_parameters.csv" [
     user-message "No file 'pollinator_parameters.csv' exists!"
@@ -230,6 +230,8 @@ to setup-pollinators
   ;  read the header row here to move the cursor down to the next line.
   let headings csv:from-row file-read-line
 
+  set pollinators_number_list [] ; Initialize list of pollinators' numbers
+
   ; We'll read all the data in a single loop
   while [ not file-at-end? ] [
 
@@ -240,16 +242,17 @@ to setup-pollinators
 
     ; we add number-of-pollinators for each pollinator in the file
     ;
-    create-pollinators number-of-pollinators [
+    create-pollinators 1 [
       setxy random-pxcor random-pycor
       set species        item 0 pollinator_data
-      set eusocial       item 1 pollinator_data         ; 0= None, 1=solitary, 2=full
-      set flight_speed   item 2 pollinator_data         ; if body_mass > 0 then it is calcualted from Liam's model
-      set stdev_angle    item 3 pollinator_data
+      set pollinators_number_list lput item 1 pollinator_data pollinators_number_list
+      set eusocial       item 2 pollinator_data         ; 0= None, 1=solitary, 2=full
+      set flight_speed   item 3 pollinator_data         ; if body_mass > 0 then it is calcualted from Liam's model
+      set stdev_angle    item 4 pollinator_data
 
-      let niche_str      item 4 pollinator_data         ; Niche = which plants the pollinator can pollinate - represent traits like open/closed flowers
+      let niche_str      item 5 pollinator_data         ; Niche = which plants the pollinator can pollinate - represent traits like open/closed flowers
       set niche_list read-from-string niche_str
-      let niche_str1      item 5 pollinator_data
+      let niche_str1      item 6 pollinator_data
       set niche_preferences read-from-string niche_str1
       if length niche_list != length niche_preferences [
         print (word "ERROR: Pollinator sp " species " doesn't have the same number of niche items and preferences")
@@ -258,19 +261,19 @@ to setup-pollinators
       ]
       ;show (word "niche_list: " niche_list " niche_preferences: " niche_preferences)
 
-      set nest_habitat     item 6 pollinator_data     ; The habitat where the nest is
-      set max_distance     item 7 pollinator_data           ; max distance a pollinator flies before return to nest, if body_mass >0 set from Liam's model
+      set nest_habitat     item 7 pollinator_data     ; The habitat where the nest is
+      set max_distance     item 8 pollinator_data           ; max distance a pollinator flies before return to nest, if body_mass >0 set from Liam's model
       ;set energy energy_by_distance * 100                   ; initial amount of energy
 
-      set perception_range item 8 pollinator_data
-      set perception_angle item 9 pollinator_data
+      set perception_range item 9 pollinator_data
+      set perception_angle item 10 pollinator_data
                                                             ; Should add memory_extinction 1/480 = 1 Day
                                                             ; last_found_patch to signal the last plant they found and to communicate
                                                             ; to other pollinators in nest.
 
-      set body_mass      item 10 pollinator_data             ; Not needed unless we parametrize from body_mass
-      set size           item 11 pollinator_data
-      set color          item 12 pollinator_data
+      set body_mass      item 11 pollinator_data             ; Not needed unless we parametrize from body_mass
+      set size           item 12 pollinator_data
+      set color          item 13 pollinator_data
       set adaptative_step 0
       set found_plant     false
 
@@ -280,7 +283,15 @@ to setup-pollinators
 
   file-close ; make sure to close the file
 
+  ask pollinators [
+
+    hatch (item (species - 1) pollinators_number_list) - 1
+  ]
+
   eusociality-setup
+
+  print word "pollinators_number_list: " pollinators_number_list
+
 end
 
 to body-mass-dependent-distance
@@ -731,21 +742,6 @@ land-cover-classes
 1
 12
 4.0
-1
-1
-NIL
-HORIZONTAL
-
-SLIDER
-875
-170
-1045
-203
-number-of-pollinators
-number-of-pollinators
-1
-100
-3.0
 1
 1
 NIL
