@@ -69,13 +69,13 @@ to setup
     file-open "Simulations/Run_habitat_parameters.csv"
 
     ;file-print (word   "filename; land-cover-classes; seed-percent; habitat_proportions; Mean-free-habitat-path")
-    file-print (word   file-name ";" land-cover-classes ";" seed-percent ";" habitat-proportions ";" calculate-mean-free-path)
+    file-print (word   file-name ";" landscape_type ";"  land-cover-classes ";" seed-percent ";" habitat-proportions ";" calculate-mean-free-path)
     file-close
 
 
     file-open file-name
     print (word file-name " - habitat proportions: " habitat-proportions )
-    file-print (word   "run; day; pollinator_agent; pollinator_species; plant_patch; plant_species; habitat; habitat_proportions; foraging_distance;  landscape_type; land-cover-classes; seed-percent")
+    file-print (word   "run; day; pollinator_agent; pollinator_species; plant_patch; plant_species; flower_density; habitat; foraging_distance")
   ]
   if video [
      vid:reset-recorder
@@ -617,8 +617,8 @@ to count-visits
   ;;
   if generate-output-file [
 
-    file-print (word   behaviorspace-run-number ";" precision day 4 ";" who ";" species ";" patch-here ";" plant_species ";" habitat ";" habitat-proportions ";"
-      precision foraging_distance 3 ";" landscape_type ";" land-cover-classes ";" seed-percent
+    file-print (word   behaviorspace-run-number ";" precision day 4 ";" who ";" species ";" patch-here ";" plant_species ";" flower_density ";" habitat ";"
+      precision foraging_distance 3
     )
   ]
 end
@@ -638,7 +638,7 @@ end
 
 ; Calculate the mean free habitat path:  is the mean
 ; distance from a randomly chosen site of an habitat to
-; the closest diferent habitat.
+; the closest diferent habitat. It uses a maximum of 100 random places inside the habitat.
 ;
 to-report calculate-mean-free-path
   let habitats (range 1 (land-cover-classes + 1 ) )
@@ -726,7 +726,7 @@ seed-percent
 seed-percent
 0.00001
 1
-1.0E-4
+1.0E-5
 0.001
 1
 NIL
@@ -1376,17 +1376,34 @@ NetLogo 6.2.0
     <enumeratedValueSet variable="number-of-days">
       <value value="1"/>
     </enumeratedValueSet>
-    <enumeratedValueSet variable="number-of-pollinators">
-      <value value="10"/>
-    </enumeratedValueSet>
     <enumeratedValueSet variable="active-search">
       <value value="true"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="generate-output-file">
       <value value="true"/>
     </enumeratedValueSet>
-    <enumeratedValueSet variable="landscape_2_scenarios">
-      <value value="&quot;heterogenous&quot;"/>
+  </experiment>
+  <experiment name="test_1day" repetitions="2" runMetricsEveryStep="true">
+    <setup>setup</setup>
+    <go>go</go>
+    <enumeratedValueSet variable="land-cover-classes">
+      <value value="4"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="landscape_type">
+      <value value="&quot;Random natural&quot;"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="seed-percent">
+      <value value="1.0E-5"/>
+      <value value="1"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="number-of-days">
+      <value value="1"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="active-search">
+      <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="generate-output-file">
+      <value value="true"/>
     </enumeratedValueSet>
   </experiment>
 </experiments>
