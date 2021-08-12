@@ -19,37 +19,45 @@ lapply(needed_packages, function(x) { if(!require(x,character.only = TRUE)) inst
 
 theme_set(theme_bw())
 
+source("R/functions.r")
 ```
 
 # Run and Read simulations from behaviorspace (headless)
 
 ```{r read_behav, echo=FALSE, tidy=TRUE, message=FALSE, warning=FALSE, eval=FALSE}
 
-# Probably not work outside linux
+# Execute simulations - Probably not work outside linux
 #
 system("bash netlogo-headless-exp.sh")
 
+# Read the names of simulation files generated
+#
 simul_fn <- list.files(path="Simulations",pattern="^Visits.*csv")
 
-# Read all simulations in simul_fn
+# Read the habitat parameters file
 #
-mdl <- lapply( simul_fn, function(x){ read_delim(paste0("Simulations/",x),";") %>% mutate(filename=x) })
+hab_parms <- read_delim("Simulations/Run_habitat_parameters.csv",";",col_names = FALSE)
+colnames(hab_parms) <- c("simul_fn","landscape_type","land_cover_classes", "seed_percent", "habitat_proportions","mean_free_path")
 
+# Read all simulations in simul_fn and merge with the info in habitat parameters file
+#
+mdl <- lapply( simul_fn, function(x){ 
+  ff <- read_delim(paste0("Simulations/",x),";") %>% mutate(simul_fn=paste0("Simulations/",x)) %>% inner_join(hab_parms)
+  })
 mdl <- bind_rows(mdl)
 
 # Correct names
 #
 names(mdl) <- str_trim(names(mdl))
 
-# sp 1 fligth_speed: 1.3 max_distance: 143.3"
-# sp 2 fligth_speed: 2.2 max_distance: 562.2"
-# sp 3 fligth_speed: 1.7 max_distance: 358.8"
-# sp 4 fligth_speed: 2.6 max_distance: 783.9"
-# sp 5 fligth_speed: 1.4 max_distance: 170.4"
-# sp 6 fligth_speed: 2.4 max_distance: 682.3"
+# Some stats
+#
+#
+mdl %>% group_by(seed_percent,pollinator_species) %>% summarize(foraging_distance = mean(foraging_distance) ) 
 
-mdl %>% group_by(filename,pollinator_species) %>% summarize(foraging_distance = max(foraging_distance) ) 
-mdl %>% group_by(filename,pollinator_species) %>% summarize(foraging_distance = mean(foraging_distance) ) 
+# Total Number of visits 
+#
+mdl %>% group_by(seed_percent,pollinator_species,plant_species) %>% summarize(number_visits = n() ) 
 
 
 ```
