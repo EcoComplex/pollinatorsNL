@@ -314,7 +314,7 @@ to body-mass-dependent-distance
     )
     set flight_speed precision flight_speed 1
     set max_distance precision max_distance 1
-    ;show (word "species: " species " body_mass: " body_mass " fligth_speed: "  flight_speed " max_distance: " max_distance)
+    ;show (word "species: " species " eusocial: " eusocial " body_mass: " body_mass " fligth_speed: "  flight_speed " max_distance: " max_distance)
   ]
 end
 ;;
@@ -593,8 +593,11 @@ to eat
       if flower_density > 0 [
       count-visits
       ;set energy energy + flower_density * energy_by_distance * 10
-      ;show (word "From patch: " patch-here " Energy: " energy " flower_density: " flower_density " niche_list: " niche_list )
+      ;if who = 0 [
+      ;  show (word "From patch: " patch-here " flower_density: " flower_density "foraging_distance : " foraging_distance " f_plant: " found_plant " a_step: " adaptative_step )
+      ;]
       set flower_density flower_density - 1
+      set found_plant true
 
     ]
   ]
@@ -857,72 +860,6 @@ MONITOR
 300
 NIL
 count pollinators
-17
-1
-11
-
-MONITOR
-15
-315
-150
-360
-Mean foraging dist sp 1
-mean [ foraging_distance ]  of pollinators with [ species = 1]
-17
-1
-11
-
-MONITOR
-15
-375
-157
-420
-Mean foraging dist sp 2
-mean [ foraging_distance ]  of pollinators with [ species = 2]
-17
-1
-11
-
-MONITOR
-15
-435
-155
-480
-Mean foraging dist sp 3
-mean [ foraging_distance ]  of pollinators with [ species = 3]
-17
-1
-11
-
-MONITOR
-15
-495
-157
-540
-Mean foraging dist sp 4
-mean [ foraging_distance ]  of pollinators with [ species = 4]
-17
-1
-11
-
-MONITOR
-15
-550
-155
-595
-mean foraging dist sp 5
-mean [ foraging_distance ]  of pollinators with [ species = 5 ]
-17
-1
-11
-
-MONITOR
-15
-605
-155
-650
-mean foraging dist sp 6
-mean [ foraging_distance ]  of pollinators with [ species = 6]
 17
 1
 11
