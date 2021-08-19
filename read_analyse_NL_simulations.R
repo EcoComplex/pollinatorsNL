@@ -18,7 +18,7 @@ setwd("Z:/Documents/postdoc_project_Helsinki/myNetlogo_models/Netlogo_models/pol
 #Susanne's
 wd.path<-"Z:/Documents/postdoc_project_Helsinki/myNetlogo_models/Netlogo_models/pollinatorsNL-main_15/Simulation_experiments/2ndweek_aug/ex1"
 #Leo's
-wd.path <- "/home/leonardo/Academicos/GitProjects/NL_proyect/ex1"
+wd.path <- "/home/leonardo/Academicos/GitProjects/NL_project/ex1"
 
 #read list with simulations
 listfile<- list.files(wd.path, pattern = "^Visits.*csv",full.names = T, recursive = TRUE)
@@ -46,11 +46,13 @@ names(mdl) <- str_trim(names(mdl))
 #
 # where n_visits is the number of visits to the same plant
 
-# To get visits of individual pollinators to the same plant you need to consider plant_patch 
-res <- mdl %>% group_by(seed_percent, pollinator_species,plant_species,pollinator_agent,plant_patch) %>% summarize(n_visits=n()) %>% filter(n_visits>1)
+# To get consecutive visits of individual pollinators to the same plant species (don't need plant_patch)
+#
+# Here testing if the pattern is rigth
+test <- mdl %>% filter( seed_percent==1e-05,run==1,pollinator_species==1,plant_species==1,pollinator_agent==19)
+# 
+res <- mdl %>% group_by(seed_percent, run, pollinator_species,plant_species,pollinator_agent) %>% summarize(n_visits=n()) %>% filter(n_visits>1)
 
-# To get visits to the same plant species by individual pollinator 
-res <- mdl %>% group_by(seed_percent, pollinator_species,plant_species,pollinator_agent) %>% summarize(n_visits=n()) %>% filter(n_visits>1)
 
 # To get visits to the same plant species by pollinator species 
 res <- mdl %>% group_by(seed_percent, pollinator_species,plant_species) %>% summarize(n_visits=n()) %>% filter(n_visits>1)
