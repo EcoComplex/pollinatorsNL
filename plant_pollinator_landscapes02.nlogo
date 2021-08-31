@@ -296,17 +296,22 @@ end
 
 to body-mass-dependent-distance
   if body_mass > 0 [                                  ; Parametrize flight_speed and max_distance using Liam's model
-    (ifelse eusocial = 2                                ; highly eusocial
+    (ifelse eusocial = 3                                ; highly eusocial
       [
-        set flight_speed ( exp (5.34 + body_mass * 0.3) * 10 ) / 480 ;pollinators do around 5 to 15 foraging trips per day ~10
+        set flight_speed ( exp (5.34 + body_mass * 0.3) * 10 ) / 480
         set max_distance   exp (5.34 + body_mass * 0.3)
       ]
-      eusocial = 1
+      eusocial = 2                                      ; primitively eusocial
       [
         set flight_speed ( exp (5.34 - 1.12 + body_mass *  0.3 ) * 10 ) / 480
         set max_distance ( exp (5.34 - 1.12 + body_mass *  0.3 ) )
       ]
-      eusocial = 0
+      eusocial = 1                                      ; solitary with nest
+      [
+        set flight_speed ( exp (5.34 - 1.13 + body_mass * 0.3 ) * 10 ) / 480
+        set max_distance ( exp (5.34 - 1.13 + body_mass * 0.3 ) )
+      ]
+      eusocial = 0                                      ; solitary no nest
       [
         set flight_speed ( exp (5.34 - 1.13 + body_mass * 0.3 ) * 10 ) / 480
         set max_distance ( exp (5.34 - 1.13 + body_mass * 0.3 ) )
@@ -326,8 +331,8 @@ to eusociality-setup
   foreach sp-list [ sp ->
     let sp-pollinator one-of pollinators with [sp = species and eusocial > 0 ]
     if sp-pollinator != nobody  [
-
-      ifelse [eusocial] of sp-pollinator = 2 [
+      let eusocial-sp [eusocial] of sp-pollinator
+      ifelse eusocial-sp = 2 or eusocial-sp = 3 [
         let ne-habitat [nest_habitat] of sp-pollinator
         let nest-patch one-of patches with [ habitat = ne-habitat ]
         if nest-patch = nobody  [
@@ -336,7 +341,7 @@ to eusociality-setup
         ]
 
         ;print (word "Pollinator: " sp-pollinator " Habitat: " ne-habitat " Nest patch: " nest-patch)
-        let eu-pollinators pollinators with [sp = species and eusocial = 2 ]
+        let eu-pollinators pollinators with [sp = species and (eusocial = 2 or eusocial = 3 ) ]
         if eu-pollinators != nobody  [
           ask eu-pollinators [
             set nest nest-patch
