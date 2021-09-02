@@ -749,7 +749,7 @@ land-cover-classes
 land-cover-classes
 1
 12
-4.0
+5.0
 1
 1
 NIL
