@@ -60,5 +60,42 @@ mdl %>% group_by(seed_percent,pollinator_species) %>% summarize(foraging_distanc
 mdl %>% group_by(seed_percent,pollinator_species,plant_species) %>% summarize(number_visits = n() ) 
 
 
+# Calculate mean habitat proportion
+#
+hab_parms <- hab_parms %>% rowwise() %>% mutate( 
+  mean_hab_prop = mean(as.numeric(unlist(str_split(str_sub(habitat_proportions, 2, str_length(habitat_proportions) -1 ), " ")))),
+  overall_mean_free_path = mean(as.numeric(unlist(str_split(str_sub(mean_free_path, 2, str_length(mean_free_path) -1 ), " "))))
+                                                 )
+
+ 
+# 
+#
+
+#Analyse data
+#
+# where n_visits is the number of visits to the same plant
+names(mdl)
+# To get consecutive visits of individual pollinators to the same plant species (don't need plant_patch)
+#
+# Here testing for one pollinator if the pattern is rigth
+test <- mdl %>% filter( seed_percent==1e-05,run==0,pollinator_agent==31)
+
+# To get consecutive visits of individual pollinators to the same plant species 
+# 
+res <- mdl %>% group_by(seed_percent, run, pollinator_species,plant_species,pollinator_agent) %>% summarize(n_visits=n()) %>% filter(n_visits>1)
+
+
+# To get visits to the same plant species by pollinator species 
+#
+res <- mdl %>% group_by(seed_percent, pollinator_species,plant_species) %>% summarize(n_visits=n()) %>% filter(n_visits>1)
+
+# foraging distances of one pollinator
+#
+res <- mdl %>% group_by( seed_percent,run,pollinator_species, pollinator_agent) %>% select(seed_percent,run,day,plant_species, pollinator_species, plant_patch,pollinator_agent,foraging_distance) %>% mutate( plant_foraging_distance = foraging_distance - lag(foraging_distance)) %>% mutate(plant_foraging_distance=if_else(is.na(plant_foraging_distance) | plant_foraging_distance<0, foraging_distance, plant_foraging_distance )
+) %>% arrange(seed_percent,run,pollinator_species, pollinator_agent)
+
+ggplot(res, aes(x=plant_foraging_distance,color=factor(pollinator_species))) + geom_histogram(aes(y=..density..), fill="white")+
+ geom_density(alpha=.2, fill="#FF6666") + facet_wrap( ~pollinator_species) + scale_x_log10() + scale_color_viridis_d(guide=FALSE)
+
 ```
 
