@@ -9,6 +9,7 @@ globals [
 ]
 
 breed [ pollinators pollinator ]
+breed [observers observer]    ; virtual observer
 
 ;; patches have 1 species of plants
 ;; patch variables have underscores
@@ -69,7 +70,7 @@ to setup
     file-open "Simulations/Run_habitat_parameters.csv"
 
     ;file-print (word   "filename; land-cover-classes; seed-percent; habitat_proportions; Mean-free-habitat-path")
-    file-print (word   file-name ";" landscape_type ";"  land-cover-classes ";" seed-percent ";" habitat-proportions ";" calculate-mean-free-path)
+    file-print (word   file-name ";" landscape_type ";"  land-cover-classes ";" seed-percent ";" habitat-proportions ";" calculate-mean-free-path ";" calculate-distance-plants)
     file-close
 
 
@@ -679,6 +680,37 @@ to-report calculate-mean-free-path
     set mfp-habitat lput precision mean list-mfp 3 mfp-habitat
   ]
   report mfp-habitat
+end
+
+
+
+to-report calculate-distance-plants
+
+  let plant-species max [plant_species] of patches
+  let plant-sp-list (range 1 (plant-species + 1 ) )
+  ;let plant-sp-list (range 1 (1 + 1 ) )
+
+  let list-distance []
+  let sp-mean-distance []
+  foreach plant-sp-list [
+
+    sp ->
+
+    ask patches with [plant_species = sp ][ sprout-observers 1 [set size 2 set color black] ]
+    ;display
+    ask observers [
+        let near-obs  min-one-of other observers [ distance myself ]
+        ;show near-obs
+        set list-distance lput (distance near-obs) list-distance
+    ]
+    ;Print (word "Species: " sp " dist: " list-distance)
+
+    set sp-mean-distance lput (mean list-distance ) sp-mean-distance
+    ;Print (word "Mean dist: " sp-mean-distance)
+
+    ask observers [ die ]
+  ]
+  report sp-mean-distance
 end
 @#$#@#$#@
 GRAPHICS-WINDOW

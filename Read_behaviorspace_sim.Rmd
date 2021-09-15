@@ -89,10 +89,10 @@ res <- mdl %>% group_by(seed_percent, run, pollinator_species,plant_species,poll
 #
 res <- mdl %>% group_by(seed_percent, pollinator_species,plant_species) %>% summarize(n_visits=n()) %>% filter(n_visits>1)
 
-# foraging distances of one pollinator
+# foraging distances of by pollinator species
 #
 res <- mdl %>% group_by( seed_percent,run,pollinator_species, pollinator_agent) %>% select(seed_percent,run,day,plant_species, pollinator_species, plant_patch,pollinator_agent,foraging_distance) %>% mutate( plant_foraging_distance = foraging_distance - lag(foraging_distance)) %>% mutate(plant_foraging_distance=if_else(is.na(plant_foraging_distance) | plant_foraging_distance<0, foraging_distance, plant_foraging_distance )
-) %>% arrange(seed_percent,run,pollinator_species, pollinator_agent)
+) # %>% arrange(seed_percent,run,pollinator_species, pollinator_agent)
 
 ggplot(res, aes(x=plant_foraging_distance,color=factor(pollinator_species))) + geom_histogram(aes(y=..density..), fill="white")+
  geom_density(alpha=.2, fill="#FF6666") + facet_wrap( ~pollinator_species) + scale_x_log10() + scale_color_viridis_d(guide=FALSE)
