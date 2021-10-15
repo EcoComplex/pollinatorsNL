@@ -65,7 +65,12 @@ to setup
   if generate-output-file [
 
     let hstime remove-item 2 ( substring date-and-time 0 5 )
-    let file-name (word "Simulations/Visits_" substring date-and-time 16 27 "_" hstime "_run_" behaviorspace-run-number ".csv")
+
+    ;let file-name (word "Simulations/Visits_" substring date-and-time 16 27 "_" hstime "_run_" behaviorspace-run-number ".csv")
+    ;
+    ; To use with nlrx
+    ;
+    let file-name (word "Simulations/Visits_" substring date-and-time 16 27 "_" hstime "_run_" nlrx-experiment ".csv")
 
     file-open "Simulations/Run_habitat_parameters.csv"
 
@@ -221,11 +226,11 @@ end
 ;
 to setup-pollinators
   file-close-all ; close all open files
-  if not file-exists? "pollinator_parameters.csv" [
-    user-message "No file 'pollinator_parameters.csv' exists!"
+  if not file-exists? pol-parameters-file-name [
+    user-message (word "No file " pol-parameters-file-name " exists!")
     stop
   ]
-  file-open "pollinator_parameters.csv" ; open the file with the turtle data
+  file-open pol-parameters-file-name; open the file with the turtle data
 
   ;; To skip the header row in the while loop,
   ;  read the header row here to move the cursor down to the next line.
@@ -376,13 +381,13 @@ end
 to setup-plants
 
   file-close-all ; close all open files
-  if not file-exists? "plant_parameters.csv" [
+  if not file-exists? plant-parameters-file-name [
 
-    user-message "No file 'plant_parameters.csv' exists!"
+    user-message (word "No file " plant-parameters-file-name  " exists!")
     stop
   ]
 
-  file-open "plant_parameters.csv" ; open the file with the turtle data
+  file-open plant-parameters-file-name ; open the file with the turtle data
 
   ;; To skip the header row
   ;read the header row here to move the cursor down to the next line.
@@ -928,6 +933,39 @@ NIL
 NIL
 NIL
 1
+
+INPUTBOX
+15
+318
+198
+378
+pol-parameters-file-name
+pollinator_parameters.csv
+1
+0
+String
+
+INPUTBOX
+14
+465
+198
+525
+nlrx-experiment
+NIL
+1
+0
+String
+
+INPUTBOX
+14
+391
+198
+451
+plant-parameters-file-name
+plant_parameters.csv
+1
+0
+String
 
 @#$#@#$#@
 ## WHAT IS IT?

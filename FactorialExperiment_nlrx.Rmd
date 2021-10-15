@@ -1,0 +1,104 @@
+
+---
+title: "Example of using nlrx package"
+author: "Leonardo A. Saravia"
+date: "9/3/2019"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE,echo=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+
+needed_packages <- c(
+    "tidyverse"
+  , "lubridate"
+  , "nlrx")
+
+lapply(needed_packages, function(x) { if(!require(x,character.only = TRUE)) install.packages(x)} )
+
+theme_set(theme_bw())
+source("R/functions.r")
+
+
+#
+# Setup for nlrx
+#
+# Unix default NetLogo installation path (adjust to your needs!):
+#
+netlogopath <- file.path("/home/leonardo/NetLogo")
+simfolder <- "/home/leonardo/Academicos/GitProjects/pollinatorsNL"
+modelpath <- file.path(simfolder, "plant_pollinator_landscapes01.nlogo")
+outpath <- file.path(simfolder,"Simulations")
+
+# If not defined set the JAVA version of your local 
+if(Sys.getenv("JAVA_HOME")==""){
+  Sys.setenv(JAVA_HOME = "/usr/lib/jvm/java-11-openjdk-amd64")
+  ## "/usr/lib/jvm/java-8-oracle"
+}
+
+nl <- nl(nlversion = "6.2",
+         nlpath = netlogopath,
+         modelpath = modelpath,
+         jvmmem = 2048)
+
+
+```
+
+# Make experiment simulations using nlrx
+
+* In "variables" we setup
+  1. Different pollinators parameter files
+  2. Different plant parameter files
+  3. Different values for seed-percent
+
+
+```{r gen_fit_lhs, echo=FALSE, tidy=TRUE, message=FALSE, warning=FALSE, eval=FALSE}
+
+nl@experiment <- experiment(expname="RandomNatural1day",
+                            outpath=outpath,
+                            repetition=1,
+                            tickmetrics="false",
+                            idsetup="setup",
+                            idgo="go",
+                            runtime=0,
+                            idrunnum="nlrx-experiment",
+                            variables = list("pol-parameters-file-name" = list(values=c("pollinators_parameter01.csv", "pollinators_parameter02.csv")),
+                                             "plant-parameters-file-name" = list(values=c("plant_parameter01.csv", "plant_parameter02.csv")),
+                                              "seed-percent" = list(values=c(1e-05,1))),
+                            constants = list("land-cover-classes" = 5,
+                                               "landscape_type" = "\"Random natural\"",
+                                               "active-search"= "true",
+                                               "number-of-days" = 1,
+                                               "generate-output-file"= "true"
+                                             ))
+
+#
+# Run full factorial 10 times (nseeds=10)
+#
+
+nl@simdesign <- simdesign_ff(nl=nl,
+                               nseeds=10)
+
+
+# 
+# run in Paralell 
+# Here the setup for the cluster should be done
+#
+require(future)
+plan(multisession)
+require(tictoc)
+tic()                                 # to measure how much time it takes 
+results <- run_nl_all(nl,split = 1)
+toc()
+plan(sequential)
+names(results)
+
+#
+# Write the output 
+#
+setsim(nl, "simoutput") <- results 
+write_simoutput(nl)
+```
+
