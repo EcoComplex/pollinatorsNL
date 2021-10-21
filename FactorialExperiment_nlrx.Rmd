@@ -29,7 +29,7 @@ source("R/functions.r")
 #
 netlogopath <- file.path("/home/leonardo/NetLogo")
 simfolder <- "/home/leonardo/Academicos/GitProjects/pollinatorsNL"
-modelpath <- file.path(simfolder, "plant_pollinator_landscapes01.nlogo")
+modelpath <- file.path(simfolder, "plant_pollinator_landscapes02.nlogo")
 outpath <- file.path(simfolder,"Simulations")
 
 # If not defined set the JAVA version of your local 
@@ -56,6 +56,8 @@ nl <- nl(nlversion = "6.2",
 
 ```{r gen_fit_lhs, echo=FALSE, tidy=TRUE, message=FALSE, warning=FALSE, eval=FALSE}
 
+polfiles <- list.files("Parameters/", "^poll.*\\.csv$")
+planfiles <- list.files("Parameters/", "^plantpoll.*\\.csv$")
 nl@experiment <- experiment(expname="RandomNatural1day",
                             outpath=outpath,
                             repetition=1,
@@ -64,8 +66,8 @@ nl@experiment <- experiment(expname="RandomNatural1day",
                             idgo="go",
                             runtime=0,
                             idrunnum="nlrx-experiment",
-                            variables = list("pol-parameters-file-name" = list(values=c("pollinators_parameter01.csv", "pollinators_parameter02.csv")),
-                                             "plant-parameters-file-name" = list(values=c("plant_parameter01.csv", "plant_parameter02.csv")),
+                            variables = list("pol-parameters-file-name" = list(values=polfiles),
+                                             "plant-parameters-file-name" = list(values=plantfiles),
                                               "seed-percent" = list(values=c(1e-05,1))),
                             constants = list("land-cover-classes" = 5,
                                                "landscape_type" = "\"Random natural\"",
