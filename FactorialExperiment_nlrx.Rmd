@@ -57,7 +57,7 @@ nl <- nl(nlversion = "6.2",
 ```{r gen_fit_lhs, echo=FALSE, tidy=TRUE, message=FALSE, warning=FALSE, eval=FALSE}
 
 polfiles <- list.files("Parameters/", "^poll.*\\.csv$")
-planfiles <- list.files("Parameters/", "^plantpoll.*\\.csv$")
+planfiles <- list.files("Parameters/", "^plant.*\\.csv$")
 nl@experiment <- experiment(expname="RandomNatural1day",
                             outpath=outpath,
                             repetition=1,
