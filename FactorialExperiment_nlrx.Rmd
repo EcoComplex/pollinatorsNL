@@ -57,8 +57,11 @@ nl <- nl(nlversion = "6.2",
 ```{r gen_fit_lhs, echo=FALSE, tidy=TRUE, message=FALSE, warning=FALSE, eval=FALSE}
 
 polfiles <- list.files("Parameters/", "^poll.*\\.csv$")
+polfiles <- polfiles[-1]
 planfiles <- list.files("Parameters/", "^plant.*\\.csv$")
-nl@experiment <- experiment(expname="RandomNatural1day",
+planfiles <- planfiles[-1]
+
+nl@experiment <- experiment(expname="RandomNaturalEx1Ex2",
                             outpath=outpath,
                             repetition=1,
                             tickmetrics="false",
@@ -81,7 +84,7 @@ nl@experiment <- experiment(expname="RandomNatural1day",
 #
 
 nl@simdesign <- simdesign_ff(nl=nl,
-                               nseeds=10)
+                               nseeds=2)
 
 
 # 
