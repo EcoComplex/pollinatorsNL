@@ -725,7 +725,7 @@ GRAPHICS-WINDOW
 630
 -1
 -1
-2.0
+3.0
 1
 10
 1
@@ -736,9 +736,9 @@ GRAPHICS-WINDOW
 1
 1
 0
-299
+199
 0
-299
+199
 1
 1
 1
@@ -889,7 +889,7 @@ number-of-days
 number-of-days
 1
 20
-2.0
+1.0
 1
 1
 NIL
@@ -940,7 +940,7 @@ INPUTBOX
 198
 378
 pol-parameters-file-name
-pollinator_parameters.csv
+Parameters/pollinator_parametersEx1.csv
 1
 0
 String
@@ -962,7 +962,7 @@ INPUTBOX
 198
 451
 plant-parameters-file-name
-plant_parameters.csv
+Parameters/plant_parametersEx1.csv
 1
 0
 String
