@@ -119,8 +119,8 @@ require(future)
 plan(multisession)
 require(tictoc)
 tic()                                 # to measure how much time it takes 
-results <- run_nl_all(nl,split = 1)
-toc()
+results <- run_nl_all(nl,split = 8)   # this number increases with the number of cores here I am using 24 cores (3 nseeds x 8 combinations)
+toc()                                 # the simulations took 1119 sec = 19 min
 plan(sequential)
 names(results)
 
