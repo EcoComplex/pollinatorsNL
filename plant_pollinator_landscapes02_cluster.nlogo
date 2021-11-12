@@ -1,11 +1,11 @@
-extensions [ csv palette vid profiler ]
+extensions [ csv palette ]
 
 globals [
   region-boundaries   ; a list of regions definitions, where each region is a list of its min pxcor and max pxcor
   habitat-proportions ; a list of habitat proportions produced by the landscape generators
   day                 ; day of the simulation
   pollinators_number_list     ; list with number of pollinators to setup
-
+  replicate_n                 ; used for number of run
 ]
 
 breed [ pollinators pollinator ]
@@ -52,106 +52,36 @@ to setup
   clear-all
   set-default-shape pollinators "bee"
 
-  (ifelse
+  setup-landscape ;IS THIS CORRECT?
 
-    landscape_type = "Regular"        [ setup-landscape_1 ];divided into 16 or 25 areas ]
-    landscape_type = "Random natural" [ setup-landscape_2 ]
-    landscape_type = "Image"          [ setup-landscape_3 ]
-  )
   setup-plants
   setup-pollinators
   set habitat-proportions calculate-habitat-area
 
-  if generate-output-file [
+  ;if generate-output-file [
 
     let hstime remove-item 2 ( substring date-and-time 0 5 )
+    let file-name (word "Simulations/Visits_" replicate_n ".csv")
 
-    ;let file-name (word "Simulations/Visits_" substring date-and-time 16 27 "_" hstime "_run_" behaviorspace-run-number ".csv")
-    ;
-    ; To use with nlrx
-    ;
-    let file-name (word "Simulations/Visits_" substring date-and-time 16 27 "_" hstime "_run_" nlrx-experiment ".csv")
-
-    file-open "Simulations/Run_habitat_parameters.csv"
+    file-open (word "Simulations/hab_pars_" replicate_n ".csv")
 
     ;file-print (word   "filename; land-cover-classes; seed-percent; habitat_proportions; Mean-free-habitat-path")
-    file-print (word   file-name ";" landscape_type ";"  land-cover-classes ";" seed-percent ";" habitat-proportions ";" calculate-plants-by-habitat ";" calculate-mean-free-path ";" calculate-distance-plants)
+    file-print (word   file-name ";" land-cover-classes ";" seed-percent ";" habitat-proportions ";" calculate-plants-by-habitat ";" calculate-mean-free-path ";" calculate-distance-plants) ;landscape_type ";"
     file-close
 
 
     file-open file-name
     print (word file-name " - habitat proportions: " habitat-proportions )
     file-print (word   "run; day; pollinator_agent; pollinator_species; plant_patch; plant_species; flower_density; habitat; foraging_distance")
-  ]
-  if video [
-     vid:reset-recorder
-     vid:start-recorder
-  ;        ; vid:record-interface
-     vid:record-view
-  ]
+  ;]
+
   reset-ticks
 end
 
 ;;
-;; Generating a regular landscape of squares
+;; Generating landscape
 ;;
-to setup-landscape_1
-
-  ;resize-world 0 99 0 99
-  ;set-patch-size 4
-
-  let number-of-regions int sqrt land-cover-classes
-
-  set region-boundaries calculate-region-boundaries number-of-regions
-  ;print (word "Region boundaries " region-boundaries)
-
-  let region-numbers (range 1 (number-of-regions + 1))
-  (foreach region-boundaries region-numbers [ [boundariesx region-numberx] ->
-    (foreach region-boundaries region-numbers [ [boundariesy region-numbery] ->
-      ask patches with [ pxcor >= first boundariesx and pxcor <= last boundariesx and pycor >= first boundariesy and pycor <= last boundariesy] [
-
-        ;print (word "region number " region-number " boundaries " boundaries)
-        set habitat region-numberx +  ( region-numbery - 1 ) * number-of-regions
-
-        ;set pcolor palette:scale-gradient [[255 255 0] [0 0 255]] habitat 1 (number-of-regions * number-of-regions)
-        set pcolor 3 + 10 * habitat
-
-      ]
-    ])
-  ])
-
-end
-
-
-;;
-;; Auxiliar routine for setup_landscape_1
-;;
-to-report calculate-region-boundaries [ num-regions ]
-  ; The region definitions are built from the region divisions:
-  let divisions region-divisions num-regions
-  ; Each region definition lists the min-pxcor and max-pxcor of the region.
-  ; To get those, we use `map` on two "shifted" copies of the division list,
-  ; which allow us to scan through all pairs of dividers
-  ; and built our list of definitions from those pairs:
-  report (map [ [d1 d2] -> list (d1 ) (d2 ) ] (but-last divisions) (but-first divisions))
-end
-
-;;
-;; Auxiliar routine for setup_landscape_1
-;;
-to-report region-divisions [ num-regions ]
-  ; This procedure reports a list of pxcor that should be outside every region.
-  ; Patches with these pxcor will act as "dividers" between regions.
-  report n-values (num-regions + 1) [ n ->
-    [ pxcor ] of patch (min-pxcor + (n  * ((max-pxcor - min-pxcor) / num-regions))) 0
-  ]
-
-end
-
-;;
-;; Random natural
-;;
-to setup-landscape_2
+to setup-landscape
 
   let dim world-width     ; assumes sizes mutilples of 10
   if dim mod 10 != 0 [
@@ -214,23 +144,16 @@ end
 
 
 
-;;; to setup real world landscape, here we could also have three examples from Nepali landscapes
-; I will ask Tom Timberlake to make three gis renderings for us with color-coded habitats where we can add the plants and flowers
-to setup-landscape_3
- ;import-drawing "Chickwell Farm.png"
- import-pcolors "Chickwell Farm.png"
-end
-
 ;
 ; procedure to read pollinators parameters from a file
 ;
 to setup-pollinators
   file-close-all ; close all open files
-  if not file-exists? pol-parameters-file-name [
-    user-message (word "No file " pol-parameters-file-name " exists!")
+  if not file-exists? (word "./experiment_setups/pol_pars_" replicate_n ".csv") [
+    user-message "No file 'pollinator_parameters.csv' exists!"
     stop
   ]
-  file-open pol-parameters-file-name; open the file with the turtle data
+  file-open (word "./experiment_setups/pol_pars_" replicate_n ".csv") ; open the file with the turtle data
 
   ;; To skip the header row in the while loop,
   ;  read the header row here to move the cursor down to the next line.
@@ -381,13 +304,13 @@ end
 to setup-plants
 
   file-close-all ; close all open files
-  if not file-exists? plant-parameters-file-name [
+  if not file-exists? (word "./experiment_setups/plant_pars_" replicate_n ".csv") [
 
-    user-message (word "No file " plant-parameters-file-name  " exists!")
+    user-message "No file 'plant_parameters.csv' exists!"
     stop
   ]
 
-  file-open plant-parameters-file-name ; open the file with the turtle data
+  file-open (word "./experiment_setups/plant_pars_" replicate_n ".csv") ; open the file with the turtle data
 
   ;; To skip the header row
   ;read the header row here to move the cursor down to the next line.
@@ -459,9 +382,6 @@ to go
 
   if not any? pollinators or day = number-of-days [               ; 480 ticks per day
     file-close
-    if video [
-        vid:save-recording "pollinators02.mp4"
-    ]
 
     stop
   ]
@@ -480,10 +400,6 @@ to go
 
 
   tick
-  if video [
-        ;vid:record-interface
-     vid:record-view
-  ]
 
 end
 
@@ -629,12 +545,12 @@ to count-visits
   ;;
   ;; File recording visits
   ;;
-  if generate-output-file [
+  ;;if generate-output-file [
 
-    file-print (word   behaviorspace-run-number ";" precision day 4 ";" who ";" species ";" patch-here ";" plant_species ";" flower_density ";" habitat ";"
+    file-print (word   replicate_n ";" precision day 4 ";" who ";" species ";" patch-here ";" plant_species ";" flower_density ";" habitat ";"            ;; Change here  behaviorspace-run-number by replicate_n
       precision foraging_distance 3
     )
-  ]
+  ;;]
 end
 
 ;
@@ -648,6 +564,7 @@ to-report calculate-habitat-area
 
   ] habitats-numbers
 end
+
 
 ; Calculate the number of plants within each habitat
 ;
@@ -670,6 +587,7 @@ to-report calculate-plants-by-habitat
   ]
   report number-plants-by-habitat
 end
+
 
 
 ; Calculate the mean free habitat path:  is the mean
@@ -747,7 +665,7 @@ GRAPHICS-WINDOW
 630
 -1
 -1
-3.0
+2.0
 1
 10
 1
@@ -758,9 +676,9 @@ GRAPHICS-WINDOW
 1
 1
 0
-199
+299
 0
-199
+299
 1
 1
 1
@@ -831,16 +749,6 @@ NIL
 NIL
 1
 
-CHOOSER
-875
-70
-1045
-115
-landscape_type
-landscape_type
-"Regular" "Random natural" "Image"
-1
-
 BUTTON
 110
 70
@@ -891,17 +799,6 @@ day
 1
 11
 
-SWITCH
-15
-155
-195
-188
-generate-output-file
-generate-output-file
-0
-1
--1000
-
 SLIDER
 875
 215
@@ -927,67 +824,6 @@ count pollinators
 17
 1
 11
-
-SWITCH
-875
-330
-978
-363
-Video
-Video
-1
-1
--1000
-
-BUTTON
-15
-685
-97
-718
-Profiler
-profiler:start         ;; start profiling\nrepeat 2 [ show calculate-mean-free-path ]       ;; run something you want to measure\nprofiler:stop          ;; stop profiling\nprint profiler:report  ;; view the results\nprofiler:reset         ;; clear the data
-NIL
-1
-T
-OBSERVER
-NIL
-NIL
-NIL
-NIL
-1
-
-INPUTBOX
-15
-318
-198
-378
-pol-parameters-file-name
-Parameters/pollinator_parametersEx1.csv
-1
-0
-String
-
-INPUTBOX
-14
-465
-198
-525
-nlrx-experiment
-NIL
-1
-0
-String
-
-INPUTBOX
-14
-391
-198
-451
-plant-parameters-file-name
-Parameters/plant_parametersEx1.csv
-1
-0
-String
 
 @#$#@#$#@
 ## WHAT IS IT?
@@ -1360,87 +1196,6 @@ NetLogo 6.2.0
 @#$#@#$#@
 @#$#@#$#@
 @#$#@#$#@
-<experiments>
-  <experiment name="regular3days" repetitions="10" runMetricsEveryStep="true">
-    <setup>setup</setup>
-    <go>go</go>
-    <enumeratedValueSet variable="land-cover-classes">
-      <value value="4"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="landscape_type">
-      <value value="&quot;Random natural&quot;"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="seed-percent">
-      <value value="1.0E-4"/>
-      <value value="0.01"/>
-      <value value="1"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="number-of-days">
-      <value value="3"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="number-of-pollinators">
-      <value value="15"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="active-search">
-      <value value="true"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="generate-output-file">
-      <value value="true"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="landscape_2_scenarios">
-      <value value="&quot;heterogenous&quot;"/>
-    </enumeratedValueSet>
-  </experiment>
-  <experiment name="random_narural1day" repetitions="50" runMetricsEveryStep="true">
-    <setup>setup</setup>
-    <go>go</go>
-    <enumeratedValueSet variable="land-cover-classes">
-      <value value="4"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="landscape_type">
-      <value value="&quot;Random natural&quot;"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="seed-percent">
-      <value value="1.0E-5"/>
-      <value value="1.0E-4"/>
-      <value value="0.001"/>
-      <value value="0.01"/>
-      <value value="1"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="number-of-days">
-      <value value="1"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="active-search">
-      <value value="true"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="generate-output-file">
-      <value value="true"/>
-    </enumeratedValueSet>
-  </experiment>
-  <experiment name="test_1day" repetitions="2" runMetricsEveryStep="true">
-    <setup>setup</setup>
-    <go>go</go>
-    <enumeratedValueSet variable="land-cover-classes">
-      <value value="4"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="landscape_type">
-      <value value="&quot;Random natural&quot;"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="seed-percent">
-      <value value="1.0E-5"/>
-      <value value="1"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="number-of-days">
-      <value value="1"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="active-search">
-      <value value="true"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="generate-output-file">
-      <value value="true"/>
-    </enumeratedValueSet>
-  </experiment>
-</experiments>
 @#$#@#$#@
 @#$#@#$#@
 default
