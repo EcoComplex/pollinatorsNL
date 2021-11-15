@@ -52,7 +52,7 @@ to setup
   clear-all
   set-default-shape pollinators "bee"
 
-  setup-landscape ;IS THIS CORRECT?
+  setup-landscape 
 
   setup-plants
   setup-pollinators
