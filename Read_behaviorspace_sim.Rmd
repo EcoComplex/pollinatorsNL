@@ -28,7 +28,7 @@ source("R/functions.r")
 
 # Execute simulations - Probably not work outside linux
 #
-system("bash netlogo-headless-exp.sh")
+# system("bash netlogo-headless-exp.sh")
 
 # Read the names of simulation files generated
 #
@@ -37,7 +37,14 @@ simul_fn <- list.files(path="Simulations",pattern="^Visits.*csv")
 # Read the habitat parameters file
 #
 hab_parms <- read_delim("Simulations/Run_habitat_parameters.csv",";",col_names = FALSE)
-colnames(hab_parms) <- c("simul_fn","landscape_type","land_cover_classes", "seed_percent", "habitat_proportions","mean_free_path")
+#
+# colnames(hab_parms) <- c("simul_fn","landscape_type","land_cover_classes", "seed_percent", "habitat_proportions","plants_by_habitat", "mean_free_path", "calculate_distance_plants")
+#
+# New version adds "plants_by_habitat"
+#
+
+colnames(hab_parms) <- c("simul_fn","landscape_type","land_cover_classes", "seed_percent", "habitat_proportions", "mean_free_path", "calculate_distance_plants")
+
 
 # Read all simulations in simul_fn and merge with the info in habitat parameters file
 #
@@ -64,22 +71,35 @@ mdl %>% group_by(seed_percent,pollinator_species,plant_species) %>% summarize(nu
 #
 hab_parms <- hab_parms %>% rowwise() %>% mutate( 
   mean_hab_prop = mean(as.numeric(unlist(str_split(str_sub(habitat_proportions, 2, str_length(habitat_proportions) -1 ), " ")))),
-  overall_mean_free_path = mean(as.numeric(unlist(str_split(str_sub(mean_free_path, 2, str_length(mean_free_path) -1 ), " "))))
+  overall_mean_free_path = mean(as.numeric(unlist(str_split(str_sub(mean_free_path, 2, str_length(mean_free_path) -1 ), " ")))),
+  mean_distance_plants = mean(as.numeric(unlist(str_split(str_sub(calculate_distance_plants, 2, str_length(calculate_distance_plants) -1 ), " ")))),
                                                  )
+```
 
+# Calculate visitation sequences and probability of pollination
+
+```{r calc_poll_prob, echo=FALSE, tidy=TRUE, message=FALSE, warning=FALSE, eval=FALSE}
  
-# 
-#
 
-#Analyse data
-#
-# where n_visits is the number of visits to the same plant
-names(mdl)
 # To get consecutive visits of individual pollinators to the same plant species (don't need plant_patch)
 #
 # Here testing for one pollinator if the pattern is rigth
-test <- mdl %>% filter( seed_percent==1e-05,run==0,pollinator_agent==31)
+test <- mdl %>% filter( seed_percent==1e-05,run==1,pollinator_agent==12) %>% select(run:foraging_distance)
 
+
+# Get visitation sequences ( if Pollinator returns to nest or the end of a day foraging_distance is lower than previous row)
+#
+test <- test %>% mutate(sequence= foraging_distance - lag(foraging_distance), sequence=if_else(sequence<0 | is.na(sequence),1,0), sequence=cumsum(sequence))
+
+#
+# Beware different runs are mixed!!!!!!!!!1
+#
+
+# TO DO Function for calculating the probability of pollination of plant species based on the sequence of visits
+
+
+
+# OLD STUFF
 # To get consecutive visits of individual pollinators to the same plant species 
 # 
 res <- mdl %>% group_by(seed_percent, run, pollinator_species,plant_species,pollinator_agent) %>% summarize(n_visits=n()) %>% filter(n_visits>1)

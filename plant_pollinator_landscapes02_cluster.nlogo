@@ -6,6 +6,11 @@ globals [
   day                 ; day of the simulation
   pollinators_number_list     ; list with number of pollinators to setup
   replicate_n                 ; used for number of run
+
+  seed-percent                ;; Parameter
+  land-cover-classes
+  number-of-days
+  active-search
 ]
 
 breed [ pollinators pollinator ]
@@ -52,7 +57,13 @@ to setup
   clear-all
   set-default-shape pollinators "bee"
 
-  setup-landscape 
+  set seed-percent 0.0005                        ;; HERE setup variables
+  set land-cover-classes 5
+  set number-of-days 1
+  set active-search true
+  set replicate_n 1005905681
+
+  setup-landscape
 
   setup-plants
   setup-pollinators
@@ -60,13 +71,13 @@ to setup
 
   ;if generate-output-file [
 
-    let hstime remove-item 2 ( substring date-and-time 0 5 )
+    ;let hstime remove-item 2 ( substring date-and-time 0 5 )
     let file-name (word "Simulations/Visits_" replicate_n ".csv")
 
     file-open (word "Simulations/hab_pars_" replicate_n ".csv")
 
     ;file-print (word   "filename; land-cover-classes; seed-percent; habitat_proportions; Mean-free-habitat-path")
-    file-print (word   file-name ";" land-cover-classes ";" seed-percent ";" habitat-proportions ";" calculate-plants-by-habitat ";" calculate-mean-free-path ";" calculate-distance-plants) ;landscape_type ";"
+    file-print (word   file-name ";" land-cover-classes ";" seed-percent ";" habitat-proportions ";" calculate-plants-by-habitat ";" calculate-mean-free-path ";" calculate-distance-plants) 
     file-close
 
 
@@ -149,11 +160,11 @@ end
 ;
 to setup-pollinators
   file-close-all ; close all open files
-  if not file-exists? (word "./experiment_setups/pol_pars_" replicate_n ".csv") [
-    user-message "No file 'pollinator_parameters.csv' exists!"
+  if not file-exists? (word "pol_pars_" replicate_n ".csv") [
+    user-message (word "No file pol_pars_" replicate_n ".csv exists!")
     stop
   ]
-  file-open (word "./experiment_setups/pol_pars_" replicate_n ".csv") ; open the file with the turtle data
+  file-open (word "pol_pars_" replicate_n ".csv") ; open the file with the turtle data
 
   ;; To skip the header row in the while loop,
   ;  read the header row here to move the cursor down to the next line.
@@ -304,13 +315,12 @@ end
 to setup-plants
 
   file-close-all ; close all open files
-  if not file-exists? (word "./experiment_setups/plant_pars_" replicate_n ".csv") [
-
-    user-message "No file 'plant_parameters.csv' exists!"
+  if not file-exists? (word "plant_pars_" replicate_n ".csv") [
+    user-message (word "No file plant_pars_" replicate_n ".csv exists!")
     stop
   ]
 
-  file-open (word "./experiment_setups/plant_pars_" replicate_n ".csv") ; open the file with the turtle data
+  file-open (word "plant_pars_" replicate_n ".csv") ; open the file with the turtle data
 
   ;; To skip the header row
   ;read the header row here to move the cursor down to the next line.
@@ -702,36 +712,6 @@ NIL
 NIL
 1
 
-SLIDER
-875
-125
-1047
-158
-seed-percent
-seed-percent
-0.00001
-1
-1.0E-5
-0.001
-1
-NIL
-HORIZONTAL
-
-SLIDER
-875
-25
-1047
-58
-land-cover-classes
-land-cover-classes
-1
-12
-5.0
-1
-1
-NIL
-HORIZONTAL
-
 BUTTON
 15
 70
@@ -766,17 +746,6 @@ NIL
 NIL
 1
 
-SWITCH
-15
-115
-195
-148
-active-search
-active-search
-0
-1
--1000
-
 MONITOR
 15
 200
@@ -798,21 +767,6 @@ day
 2
 1
 11
-
-SLIDER
-875
-215
-1045
-248
-number-of-days
-number-of-days
-1
-20
-1.0
-1
-1
-NIL
-HORIZONTAL
 
 MONITOR
 80
