@@ -160,11 +160,11 @@ end
 ;
 to setup-pollinators
   file-close-all ; close all open files
-  if not file-exists? (word "pol_pars_" replicate_n ".csv") [
-    user-message (word "No file pol_pars_" replicate_n ".csv exists!")
+  if not file-exists? (word "./experiment_setups/pol_pars_" replicate_n ".csv") [
+    user-message (word "No file ./experiment_setups/pol_pars_" replicate_n ".csv exists!")
     stop
   ]
-  file-open (word "pol_pars_" replicate_n ".csv") ; open the file with the turtle data
+  file-open (word "./experiment_setups/pol_pars_" replicate_n ".csv") ; open the file with the turtle data
 
   ;; To skip the header row in the while loop,
   ;  read the header row here to move the cursor down to the next line.
@@ -315,12 +315,12 @@ end
 to setup-plants
 
   file-close-all ; close all open files
-  if not file-exists? (word "plant_pars_" replicate_n ".csv") [
-    user-message (word "No file plant_pars_" replicate_n ".csv exists!")
+  if not file-exists? (word "./experiment_setups/plant_pars_" replicate_n ".csv") [
+    user-message (word "No file ./experiment_setups/plant_pars_" replicate_n ".csv exists!")
     stop
   ]
 
-  file-open (word "plant_pars_" replicate_n ".csv") ; open the file with the turtle data
+  file-open (word "./experiment_setups/plant_pars_" replicate_n ".csv") ; open the file with the turtle data
 
   ;; To skip the header row
   ;read the header row here to move the cursor down to the next line.
