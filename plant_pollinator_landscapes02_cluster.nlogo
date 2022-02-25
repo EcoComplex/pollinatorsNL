@@ -11,6 +11,7 @@ globals [
   land-cover-classes
   number-of-days
   active-search
+  minutes-per-day
 ]
 
 breed [ pollinators pollinator ]
@@ -62,6 +63,7 @@ to setup
   set number-of-days 1
   set active-search true
   set replicate_n 1005905681
+  set minutes-per-day 480
 
   setup-landscape
 
@@ -77,7 +79,7 @@ to setup
     file-open (word "Simulations/hab_pars_" replicate_n ".csv")
 
     ;file-print (word   "filename; land-cover-classes; seed-percent; habitat_proportions; Mean-free-habitat-path")
-    file-print (word   file-name ";" land-cover-classes ";" seed-percent ";" habitat-proportions ";" calculate-plants-by-habitat ";" calculate-mean-free-path ";" calculate-distance-plants) 
+    file-print (word   file-name ";" land-cover-classes ";" seed-percent ";" habitat-proportions ";" calculate-plants-by-habitat ";" calculate-mean-free-path ";" calculate-distance-plants)
     file-close
 
 
@@ -207,7 +209,7 @@ to setup-pollinators
 
       set perception_range item 9 pollinator_data
       set perception_angle item 10 pollinator_data
-                                                            ; Should add memory_extinction 1/480 = 1 Day
+                                                            ; Should add memory_extinction 1/minutes-per-day = 1 Day
                                                             ; last_found_patch to signal the last plant they found and to communicate
                                                             ; to other pollinators in nest.
 
@@ -238,22 +240,22 @@ to body-mass-dependent-distance
   if body_mass > 0 [                                  ; Parametrize flight_speed and max_distance using Liam's model
     (ifelse eusocial = 3                                ; highly eusocial
       [
-        set flight_speed ( exp (5.34 + body_mass * 0.3) * 10 ) / 480
+        set flight_speed ( exp (5.34 + body_mass * 0.3) * 10 ) / minutes-per-day
         set max_distance   exp (5.34 + body_mass * 0.3)
       ]
       eusocial = 2                                      ; primitively eusocial
       [
-        set flight_speed ( exp (5.34 - 1.12 + body_mass *  0.3 ) * 10 ) / 480
+        set flight_speed ( exp (5.34 - 1.12 + body_mass *  0.3 ) * 10 ) / minutes-per-day
         set max_distance ( exp (5.34 - 1.12 + body_mass *  0.3 ) )
       ]
       eusocial = 1                                      ; solitary with nest
       [
-        set flight_speed ( exp (5.34 - 1.13 + body_mass * 0.3 ) * 10 ) / 480
+        set flight_speed ( exp (5.34 - 1.13 + body_mass * 0.3 ) * 10 ) / minutes-per-day
         set max_distance ( exp (5.34 - 1.13 + body_mass * 0.3 ) )
       ]
       eusocial = 0                                      ; solitary no nest
       [
-        set flight_speed ( exp (5.34 - 1.13 + body_mass * 0.3 ) * 10 ) / 480
+        set flight_speed ( exp (5.34 - 1.13 + body_mass * 0.3 ) * 10 ) / minutes-per-day
         set max_distance ( exp (5.34 - 1.13 + body_mass * 0.3 ) )
       ]
     )
@@ -384,13 +386,13 @@ end
 
 to go
 
-  set day ( ticks / 480 )
+  set day ( ticks / minutes-per-day )
   if ( int day ) = day [                              ; replenish-flowers first time and then at the end of the day
     replenish-flowers
     return-all-pollinators
   ]
 
-  if not any? pollinators or day = number-of-days [               ; 480 ticks per day
+  if not any? pollinators or day = number-of-days [               ; minutes-per-day ticks per day
     file-close
 
     stop

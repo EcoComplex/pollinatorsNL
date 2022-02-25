@@ -273,7 +273,7 @@ to setup-pollinators
 
       set perception_range item 9 pollinator_data
       set perception_angle item 10 pollinator_data
-                                                            ; Should add memory_extinction 1/480 = 1 Day
+                                                            ; Should add memory_extinction 1/minutes-per-day = 1 Day
                                                             ; last_found_patch to signal the last plant they found and to communicate
                                                             ; to other pollinators in nest.
 
@@ -304,22 +304,22 @@ to body-mass-dependent-distance
   if body_mass > 0 [                                  ; Parametrize flight_speed and max_distance using Liam's model
     (ifelse eusocial = 3                                ; highly eusocial
       [
-        set flight_speed ( exp (5.34 + body_mass * 0.3) * 10 ) / 480
+        set flight_speed ( exp (5.34 + body_mass * 0.3) * 10 ) / minutes-per-day
         set max_distance   exp (5.34 + body_mass * 0.3)
       ]
       eusocial = 2                                      ; primitively eusocial
       [
-        set flight_speed ( exp (5.34 - 1.12 + body_mass *  0.3 ) * 10 ) / 480
+        set flight_speed ( exp (5.34 - 1.12 + body_mass *  0.3 ) * 10 ) / minutes-per-day
         set max_distance ( exp (5.34 - 1.12 + body_mass *  0.3 ) )
       ]
       eusocial = 1                                      ; solitary with nest
       [
-        set flight_speed ( exp (5.34 - 1.13 + body_mass * 0.3 ) * 10 ) / 480
+        set flight_speed ( exp (5.34 - 1.13 + body_mass * 0.3 ) * 10 ) / minutes-per-day
         set max_distance ( exp (5.34 - 1.13 + body_mass * 0.3 ) )
       ]
       eusocial = 0                                      ; solitary no nest
       [
-        set flight_speed ( exp (5.34 - 1.13 + body_mass * 0.3 ) * 10 ) / 480
+        set flight_speed ( exp (5.34 - 1.13 + body_mass * 0.3 ) * 10 ) / minutes-per-day
         set max_distance ( exp (5.34 - 1.13 + body_mass * 0.3 ) )
       ]
     )
@@ -451,13 +451,13 @@ end
 
 to go
 
-  set day ( ticks / 480 )
+  set day ( ticks / minutes-per-day )
   if ( int day ) = day [                              ; replenish-flowers first time and then at the end of the day
     replenish-flowers
     return-all-pollinators
   ]
 
-  if not any? pollinators or day = number-of-days [               ; 480 ticks per day
+  if not any? pollinators or day = number-of-days [               ; minutes-per-day ticks per day
     file-close
     if video [
         vid:save-recording "pollinators02.mp4"
@@ -574,11 +574,11 @@ to move-pollinators
     ;
     ; energy lost by movement
     ;
-
     ;let euse adaptative_step * energy_by_distance
     ;set energy (energy - euse)
 
     set foraging_distance  foraging_distance + adaptative_step
+    show (word adaptative_step " - " foraging_distance )
   ]
 end
 
@@ -808,7 +808,7 @@ land-cover-classes
 land-cover-classes
 1
 12
-5.0
+7.0
 1
 1
 NIL
@@ -962,7 +962,7 @@ INPUTBOX
 198
 378
 pol-parameters-file-name
-Parameters/pollinator_parametersEx1.csv
+pol_pars_1005905681.csv
 1
 0
 String
@@ -984,10 +984,25 @@ INPUTBOX
 198
 451
 plant-parameters-file-name
-Parameters/plant_parametersEx1.csv
+plant_pars_1005905681.csv
 1
 0
 String
+
+SLIDER
+875
+170
+1047
+203
+minutes-per-day
+minutes-per-day
+480
+600
+480.0
+10
+1
+NIL
+HORIZONTAL
 
 @#$#@#$#@
 ## WHAT IS IT?
