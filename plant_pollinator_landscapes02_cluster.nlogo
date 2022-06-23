@@ -784,19 +784,102 @@ count pollinators
 @#$#@#$#@
 ## WHAT IS IT?
 
-(a general understanding of what the model is trying to show or explain)
+This model is asscoiated with the paper:
+
+Landscape composition and plant-pollinator network structure interact to influence pollination success in an individual-based model
+
+The model was developed by Leonardo Saravia and Susanne Kortsch 
+
+-----------------------------------------------------------------------------------------
+
+The model description below follows the ODD (Overview, Design concepts, Details) protocol for describing individual- and agent-based models (Grimm et al. 2006, 2010). The model was implemented in NetLogo (Wilensky, 1999), version 6.0.4.
+
+1. Purpose
+
+The main purpose of the model is to understand how the landscape structure influences pollinator visitation rates. By adjusting the arrangements of “habitats” and plants in the landscape, the model serves as a practical tool to mimic the effects of plant intermixing on plant-pollinator interactions. Number of habitats and plants can be adjusted to test different hypotheses. In the Netlogo world, colored grid cells represent different plant types, which are visited by pollinators based on some rules for pollinator movement behavior. Plants with many flowers will be more attractive to pollinators. This variable is also affected by a pollinators’ plant preference, i.e., its diet niche. The pollinators’ visitation rate and plant-pollinator networks will be constructed by recording the pollinators visits to plants. The resulting data that can be analyzed in precisely the same way as conventional field data.
 
 ## HOW IT WORKS
 
-(what rules the agents use to create the overall behavior of the model)
+2. Entities, state variables and scales
+
+The model has two types of agents, pollinators and plants. Pollinators are the only mobile agents in the simulation, whereas plants are non-mobile. Pollinators and plants are associated with state variables determining their traits and behaviors. Pollinators are divided into species distinguished by a unique set of traits such as body size, eusociality, foraging distance, and niche (i.e., a subset of plants they interact with) and niche preferences. Plants can have varying numbers of flowers, which will determine their attractiveness to pollinators. The more flowers, the more attractive the plant will be to pollinators will be. 
+There are seven habitats of which six each contain one plant species. A proportion f of patches contains plant species (with a single plant, but flower density can be varied). The remaining proportion of patches (1-f) are empty. Each patch which contains a plant corresponds to a single plant type indicated by a unique color. The world is set to wrap vertically and horizontally.
+The “netlogo world” consists of 1m x 1m grid cells (square patches) and the model landscape comprises 600 x 600 m. 
+
+3. Process overview and scheduling
+
+Time is modelled as discrete steps called ticks in Netlogo. Processes modeled are: 1) movement of pollinators; 2) plants perceived based on attractiveness; 3) visits to plants. 
+
+4. Design concepts
+
+Basic principles 
+
+As currently configured, the model assumes that pollinators can perceive flower density of plants, given that plants are within their niche and perception range. We pre-assigned a fundamental niche to pollinators, i.e., they can interact with a subset of the plant types. To select a plant from its niche, the pollinator checks all plants within its perception range and chooses the one with the most flowers (Benadi and Gaeger 2018), then it moves in a straight line to the chosen plant at a given flight speed (patches per time step). If more than one plant matches this criterion, the pollinator randomly chooses one among them. If no flowers are within a pollinator’s perception range, it continues to move in a correlated random walk until it perceives at least one plant from its niche. 
+Pollinators are associated with different parameters (e.g., flight speed, nest, or no nest) which results in somewhat different movement behaviors, foraging distances and hence in different number of plants visited. Generally, larger-sized pollinators will travel further.
+
+Emergence. — The pollination events emerge from 1) the movement of pollinators 2) flower density, 3) niche and niche preferences of pollinators, and 3) the spatial distribution of plant resources.
+ 
+Adaptation. — Pollinators change their foraging behavior in response to clues from their environment, i.e., plant attractiveness. 
+Prediction. — The model does not incorporate any prediction by the agents, i.e., agents do not adjust their behavior to future conditions or consequences of decisions.
+Sensing. — The only sensing that occurs is the sensing of plants by pollinators at each time step. 
+
+Interaction - No direct interaction between agents was incorporated in the model, i.e., agents do not affect each other.  Pollinators may affect each other indirectly (i.e., compete) as plants visited will lose one flower unit and become less attractive to other pollinators.
+
+Stochasticity. — Movement of pollinators follows a correlated random walk with turning angles drawn from a normal distribution with mean (0) and standard deviation (90). The flight speed is not constant but randomly sampled from a Poisson distribution with mean FS at every time step for every pollinator individual. FS are defined based on allometric body size- foraging distance scaling relationships (Kendall et al. accepted). 
+Collectives. — Both the pollinator agents and the plants belong to groups with their own set of traits (sociality, plant densities) which results in different model behaviors, and which will give rise to different plant-pollinator encounter rates and hence pollination events.
+Observation. — Output data are counts of the number of visits by each pollinator to each plant species. These visits reported are saved in a format (e.g., csv file), which can then be imported and analyzed in a statistical program such as R (R Core Team, 2021). 
+
+Details
+
+Initialisation. — Simulations are conducted with randomized plant and pollinator input files 
+
+Input data. — The model does currently not use any external information sources, but this could be included. 
+
+Submodels. — At each timestep (i.e., tick), the following processes occur:
+Move-pollinators: Movement of pollinators, e.g., its foraging range and flight speeds, depends on pollinator perception range and perception angle and other pollinator species’ traits such as its body size, sociality category and plant pollinator preferences. Foraging ranges scale positively with body size according to an allometric function, and also depend on sociality category (Kendall et al. 2022). Per unit body size, foraging ranges are larger an increase at greater rate with sociality. The exact movement details of pollinators are explained thoroughly in the main article text associated with this model.
+
+Count-visits: The Netlogo patches that are classified as plants (i.e., the colored patches) count the number of visits by each pollinator species during each timestep. A visit is recorded when a pollinator is located on top of a grid cell that is classified as a plant. 
+
+Eat: Agents remove one flower unit after each visit but do not gain energy from visiting a plant. NB! This procedure is currently very simple and could be extended in future work by adding sensing of plants (and their rewards, nectar quantity and quality) by pollinators.
+
+Death: As our simulations runs only for one day, pollinators do not die.  
+
+Outputs: The model is configured such that when an individual pollinator visits an individual flower with a given color, the visit is recorded; model output includes the visits made by each pollinator species to each flower species at each tick. An output file (e.g., Visits_10) with all pairwise interactions is saved to a csv file. The resulting plant-pollinator interactions and bipartite networks can be analyses in R or similar statistical programs.
+Furthermore, a csv file with habitat characteristics (size of habitats, number of grid cells with plants in a habitat etc.) is generated.
+
+
 
 ## HOW TO USE IT
 
-(how to use the model, including a description of each of the items in the Interface tab)
+
+The model needs plant and pollinator input files specifying the parameters of the model.
+
+Input file names are:
+
+plant_pars_replicate_n
+pol_pars_replicate_n
+
+Inside the model the replictae number of the input files are specfied, e.g., 10.
+In order for the model to read the files, this needs to be reflected in the input file names, e.g.:
+ 
+plant_pars_10
+pol_pars_10
+
+
+Setup:
+Sets up the landscape
+
+Go:
+Starts the simulation
+
+There are three sliders in the model that can be used to change the landscape:
+-land-cover-class, determines number of "habitats"
+-seed-percent, determines how intermixed the habitats=plants are
+-number-of-days, determines how many days the simulation runs. One day contains 600 ticks
 
 ## THINGS TO NOTICE
 
-(suggested things for the user to notice while running the model)
+NOTE! The model setup is very slow. The model landscape size may be decreased to 299*299 grid cells for faster start up under settings in the interface.
 
 ## THINGS TO TRY
 
@@ -804,7 +887,7 @@ count pollinators
 
 ## EXTENDING THE MODEL
 
-(suggested things to add or change in the Code tab to make the model more complicated, detailed, accurate, etc.)
+The model could be extended by inlcuding some population dynamics
 
 ## NETLOGO FEATURES
 
@@ -812,11 +895,24 @@ count pollinators
 
 ## RELATED MODELS
 
-(models in the NetLogo Models Library and elsewhere which are of related interest)
+The landscape diversity model by Wirth et al. (2016) which was used for this study.
+http://ccl.northwestern.edu/netlogo/models/community/Landscape%20Diversity
 
 ## CREDITS AND REFERENCES
 
-(a reference to the model's URL on the web if it has one, as well as any other necessary credits, citations, and links)
+Benadi, G. & Gaeger, R. J. 2018. Adaptive Foraging of Pollinators Can Promote Pollination of a Rare Plant Species. The American Naturalist 192, E81–E92. 
+
+Grimm V, Berger U, Bastiansen F, Eliassen S, Ginot V, Giske J, Goss-Custard J, Grand T, et al. (2006) A standard protocol for describing individual-based and agent-based models. Ecological Modelling 198, 115–126.
+
+Grimm V, Berger U, DeAngelis DL, Polhill JG, Giske J, Railsback SF (2010) The ODD protocol: a review and first update. Ecological Modelling 221, 2760-2768.
+
+Kendall, L., Mola, J., Portman, Z., Cariveau D., Smith, H. & Bartomeus, I. 2022. The potential and realized foraging movements of bees are differentially determined by body size and sociality. Accepted in Ecology, to be published soon.
+
+R Core Team. 2021. R: A language and environment for statistical computing. R Foundation for Statistical Computing, Vienna, Austria. URL https://www.R-project.org/.
+
+Wilensky U. NetLogo. http://ccl.northwestern.edu/netlogo/. Center for Connected Learning and Computer-Based Modeling, Northwestern University, Evanston, IL. 1999.
+
+Wirth, E., Szabó, Gy., and Czinkóczky. 2016 A.: MEASURE OF LANDSCAPE HETEROGENEITY BY AGENT-BASED METHODOLOGY, ISPRS Ann. Photogramm. Remote Sens. Spatial Inf. Sci., III-8, 145-151, http://dx.doi.org/10.5194/isprs-annals-III-8-145-2016
 @#$#@#$#@
 default
 true
