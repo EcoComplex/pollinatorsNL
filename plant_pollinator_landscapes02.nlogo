@@ -556,6 +556,8 @@ to move-pollinators
         ]
         let higher-patch max-one-of highest-patch [pollinators_weigth ]
         ;print (word "Higher patch: " [pollinators_weigth ] of higher-patch )
+        ; !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        ; if the species of higher-patch is not the preferred they do a correlated walk two or three times
 
         face higher-patch
         set adaptative_step distance higher-patch
