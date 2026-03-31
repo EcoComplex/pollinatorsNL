@@ -7,23 +7,28 @@ globals [
   habitat-proportions ; a list of habitat proportions produced by the landscape generators
   day                 ; day of the simulation
   pollinators_number_list     ; list with number of pollinators to setup
+  p_stay;                     ; Probability of pollinators visiting sorrounding plants inside their niche after the plant with max score was visited
 
 ]
 
-breed [ pollinators pollinator ]
+breed [pollinators pollinator ]
 breed [observers observer]    ; virtual observer
+breed [plants plant]
 
-;; patches have 1 species of plants
-;; patch variables have underscores
-;;
-patches-own[
+plants-own [
   number_of_visits
-  habitat
   plant_species
   flower_density       ;; More density more attractive to pollinatiors a proxy of energy available
   flower_max           ;; Parameters to replenish the flower_density each day with a random number between flower_min and flower_max
   flower_min           ;;
-  pollinators_weigth   ;; auxiliar variable to determine pollinators preferences: flower_density * niche_preferences,
+  pollinators_weigth   ;; auxiliar variable to determine pollinators preferences: flower_density * niche_preferences,xx
+]
+
+;; patches can have more than 1 species of plants
+;; patch variables have underscores
+;;
+patches-own[
+  habitat
 ]
 
 ;;
@@ -47,13 +52,14 @@ pollinators-own [
   adaptative_step       ; distance travelled
   found_plant           ; found a plant to pollinate
   on_nest               ; pollinator is on nest
+  current_target
 ]
 
 
 to setup
   clear-all
   set-default-shape pollinators "bee"
-
+  set p_stay 1 
   (ifelse
 
     landscape_type = "Regular"        [ setup-landscape_1 ];divided into 16 or 25 areas ]
@@ -83,7 +89,7 @@ to setup
 
     file-open file-name
     print (word file-name " - habitat proportions: " habitat-proportions )
-    file-print (word   "run; day; pollinator_agent; pollinator_species; plant_patch; plant_species; flower_density; habitat; foraging_distance")
+    file-print (word   "run; day; pollinator_agent; pollinator_species; plant_agent; plant_species; flower_density; habitat; foraging_distance")
   ]
   if video [
      vid:reset-recorder
@@ -408,49 +414,68 @@ to setup-plants
 
     let habitat_list read-from-string habitat_str
     let density_list read-from-string density_str
-    ; print (word "density_list: " density_list )
+    print (word "density_list: " density_list )
 
     let i 0
     
     ; for each habitat set the plants
     foreach habitat_list [ h ->
-      ;
+
       let density item i density_list
-      let npatches count patches with [habitat = h]
-      print (word "Habitat: " h " Total patches: " npatches )
-      set npatches npatches * density
-      print (word "Species: " plant_sp " patches: " npatches )
+      let candidate-patches patches with [ habitat = h ]
+      let npatches count candidate-patches
+
+      ;; número total de individuos a crear
+      let nplants round (npatches * density)
+
+      print (word "Habitat: " h " patches: " npatches " plants: " nplants)
 
       set i i + 1
-      ask n-of npatches patches with [habitat = h and plant_species = 0] [
 
+      create-plants nplants [
+        
+        ;; asignar patch aleatorio dentro del hábitat
+        let target one-of candidate-patches
+        move-to target
+        
         set plant_species plant_sp
-        set flower_max sp_flower_max
         set flower_min sp_flower_min
-        ;show (word "Plant species: " plant_sp " habitat: " h )
-        set pcolor palette:scale-gradient palette:scheme-colors "Divergent" "RdYlGn" 9 plant_sp 0 10   ;; Color assumes 10 plant species
+        set flower_max sp_flower_max
+        set flower_density random (flower_max - flower_min + 1) + flower_min
+        
+        ;; opcional pero útil
+        set habitat [habitat] of patch-here
+        
+        ;; visualización
+        ;set color palette:scale-gradient palette:scheme-colors "Divergent" "RdYlGn" 9 plant_sp 0 10   ;; Color assumes 10 plant species
+        let intensity flower_density / flower_max
+
+        ;; separa bien especies
+        set color (10 * plant_species) + 5 - intensity 
+        set size 1.2
+        set shape "flower"
       ]
     ]
     ; setup plants in the landscape
   ]
 end
 
+
 to replenish-flowers
-  ;print "Replenish-flowers"
-  ask patches with [ plant_species != 0 ][
-
-    set flower_density random ( flower_max - flower_min + 1 ) + flower_min
-    ;show (word "Plant species: " plant_species " habitat: " habitat " Flower_density: " flower_density " pcolor:" pcolor )
-    paint-flower-density    ;show (word "After pcolor:" pcolor )
-
-
+  ask plants [
+    set flower_density random (flower_max - flower_min + 1) + flower_min
   ]
+  paint-flower-density    ;show (word "After pcolor:" pcolor )
 end
 
 to paint-flower-density
-    set pcolor palette:scale-gradient palette:scheme-colors "Divergent" "RdYlGn" 9 plant_species 0 10   ;; Color assumes max 10 plant species
+  ask plants [
+    ;; mapear intensidad a rango de brillo
+    let intensity flower_density / flower_max
 
-    set pcolor map [ i -> flower_density / flower_max * i  ] pcolor
+    ;; separa bien especies
+    set color (10 * plant_species) + 5 - intensity 
+  ]
 end
 
 to go
@@ -474,7 +499,6 @@ to go
 
     move-pollinators
     eat
-    death
   ]
   ;ask patches with [ plant_species != 0 ]
   ;[
@@ -541,34 +565,37 @@ to move-pollinators
       ;
       ; Detect the max flower_density of plants in the niche
       ;
-      let highest-list map [x  ->  max-one-of ( patches with [plant_species = x ] in-cone perception_range perception_angle )[flower_density] ] niche_list
-      ;print (word "highest-list: "  highest-list )
+      let highest-list map [x -> max-one-of (plants with [plant_species = x] in-cone perception_range perception_angle)[flower_density] ] niche_list
+      ;show (word "highest-list: "  highest-list )
+
+      let highest-target turtle-set highest-list
 
       ;
       ; Then weigth by preferences
       ;
-      let highest-patch  patch-set highest-list
-      ifelse any? highest-patch [
+      ifelse any? highest-target [
         ;print (word "Niche_preferences: " Niche_preferences )
         let np niche_preferences
         let nl niche_list
-        ask highest-patch  [
+        
+        ask highest-target [
           let pos_np position plant_species nl
           let pw item pos_np np
           set pollinators_weigth pw * flower_density
           ;show (word "Niche preference: " pw " pollinators_weigth: " pollinators_weigth " flower_density: " flower_density)
         ]
-        let higher-patch max-one-of highest-patch [pollinators_weigth ]
+        
+        let higher-target max-one-of highest-target [pollinators_weigth]
         ;print (word "Higher patch: " [pollinators_weigth ] of higher-patch )
-        ; !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        ; if the species of higher-patch is not the preferred they do a correlated walk two or three times
-
-        face higher-patch
-        set adaptative_step distance higher-patch
-        move-to higher-patch
+        
+        face higher-target
+        set adaptative_step distance higher-target
+        move-to higher-target
         set found_plant true
+        set current_target higher-target
 
         ;show (word "Found plant move to higher patch " higher-patch )
+
       ][
         correlated-random-walk
         ;show "Not found plant correlated random walk"
@@ -602,46 +629,66 @@ end
 ; The pollinators only take the pollen of plants inside their niche
 ;
 to eat
-  ;if is-flowering = TRUE [
-  ;let total_flowers 0
-  ;let p_niche niche_list
-  ;print (word "Plant sp: " species " niche_list: " p_niche "Flower_density: " flower_density)
-  if member? plant_species niche_list [
-      if flower_density > 0 [
-      count-visits
-      ;set energy energy + flower_density * energy_by_distance * 10
-      ;if who = 0 [
-      ;  show (word "From patch: " patch-here " flower_density: " flower_density "foraging_distance : " foraging_distance " f_plant: " found_plant " a_step: " adaptative_step )
-      ;]
-      set flower_density flower_density - 1
-      set found_plant true
+  if not found_plant [ stop ]
+  if current_target = nobody [ stop ]
 
-    ]
+  ;; 1. visitar la planta elegida (decisión previa)
+  visit-plant current_target
+  
+  ;;print (word "Antes de let local-patches" current_target)
+
+  ;; 3. plantas disponibles en vecindario
+  let local-plants plants in-radius 1  with [
+    member? plant_species [niche_list] of myself and flower_density > 0
   ]
-  ;show (word "Total_flowers: " total_flowers " Is habitat " habitat )
+  print (word "Local-plants: " local-plants)
+  ;; excluir la ya visitada
+  set local-plants local-plants with [self != [current_target] of myself ]
+  ;;print (word "local-plants: " local-plants " sin actual: " current_target)
+  
 
-  ;]
+  ;; 4. exploración local estocástica
+  while [any? local-plants and random-float 1 < p_stay] [
+
+    let next-plant one-of local-plants   ;; SIN optimizar
+    
+    ;; moverse si no está en el mismo patch
+    if patch-here != [patch-here] of next-plant [
+      face next-plant
+      move-to next-plant
+      set foraging_distance  foraging_distance + 1
+    ]
+
+    visit-plant next-plant
+
+    ;; 🔥 SOLO actualizar lista, no patches
+    set local-plants local-plants with [self != next-plant]
+
+  ]
 end
 
+to visit-plant [p]
+  ask p [
+    set flower_density flower_density - 1
+    set number_of_visits number_of_visits + 1
+  ]
 
-; pollinators die after running out of fuel=energy
-;
-to death
-;    if ( energy < 0 ) [ die ]
-end
-
-to count-visits
-  set number_of_visits number_of_visits + 1
-  ;;
-  ;; File recording visits
-  ;;
   if generate-output-file [
-
-    file-print (word   behaviorspace-run-number ";" precision day 4 ";" who ";" species ";" patch-here ";" plant_species ";" flower_density ";" habitat ";"
+    file-print (word  
+      behaviorspace-run-number ";" 
+      precision day 4 ";"
+      who ";"
+      species ";"             ;; pollinator
+      [who] of p ";" 
+      [plant_species] of p ";" 
+      [flower_density] of p ";"
+      [habitat] of p ";"
       precision foraging_distance 3
     )
   ]
 end
+
+
 
 ;
 ; Calculate the proportion of each habitat
@@ -658,22 +705,24 @@ end
 ; Calculate the number of plants within each habitat
 ;
 to-report calculate-plants-by-habitat
-  let habitats-list (range 1 (land-cover-classes + 1 ) )
-  let plantspecies max [plant_species] of patches
-  let plant-sp-list (range 1 (plantspecies + 1 ) )
+
+  let habitats-list (range 1 (land-cover-classes + 1))
+  
+  ;; especies presentes en plants (más robusto que usar patches)
+  let plant-sp-list sort remove-duplicates [plant_species] of plants
+  
   let number-plants-by-habitat []
+
   foreach habitats-list [ h ->
 
-    let plants map [
-
-      p ->  ( count patches with [ habitat = h and plant_species = p ]   )
-
+    let nplants map [
+      p -> count plants with [ habitat = h and plant_species = p ]
     ] plant-sp-list
-    set number-plants-by-habitat lput plants number-plants-by-habitat
 
-    ;print (word "Habitat: " h " Plants " plant-sp-list " count " plants)
+    set number-plants-by-habitat lput nplants number-plants-by-habitat
 
   ]
+
   report number-plants-by-habitat
 end
 
@@ -715,41 +764,56 @@ to-report calculate-mean-free-path
   report mfp-habitat
 end
 
-
-
+; Report mean distance and variance of distances between individuals of plants
+;
+;
 to-report calculate-distance-plants
 
-  let plant-species max [plant_species] of patches
-  let plant-sp-list (range 1 (plant-species + 1 ) )
-  ;let plant-sp-list (range 1 (1 + 1 ) )
+  let plant-sp-list sort remove-duplicates [plant_species] of plants
+  
+  let results []
 
-  let list-distance []
-  let sp-mean-distance []
+  ;; parámetro de muestreo (podés hacerlo slider si querés)
+  let sample-size 50
+
   foreach plant-sp-list [
 
     sp ->
 
-    ask patches with [plant_species = sp ][ sprout-observers 1 [set size 2 set color black] ]
-    ;display
-    ask observers [
-        let near-obs  min-one-of other observers [ distance myself ]
-        ;show near-obs
-        set list-distance lput (distance near-obs) list-distance
+    let sp-plants plants with [plant_species = sp]
+    let n count sp-plants
+
+    ifelse n > 1 [
+
+      ;; tamaño efectivo del sampleo
+      let k min list sample-size n
+
+      let sampled n-of k sp-plants
+      let distances []
+
+      ask sampled [
+        let near min-one-of other sp-plants [distance myself]
+        set distances lput (distance near) distances
+      ]
+
+      let m mean distances
+      let v variance distances
+
+      set results lput (list sp m v) results
+
+    ] [
+      ;; casos con 0 o 1 individuo
+      set results lput (list sp 0 0) results
     ]
-    ;Print (word "Species: " sp " dist: " list-distance)
-
-    set sp-mean-distance lput (mean list-distance ) sp-mean-distance
-    ;Print (word "Mean dist: " sp-mean-distance)
-
-    ask observers [ die ]
   ]
-  report sp-mean-distance
+
+  report results
 end]]></code>
   <widgets>
-    <view x="279" wrappingAllowedX="true" y="21" frameRate="30.0" minPycor="0" height="604" showTickCounter="true" patchSize="3.0" fontSize="10" wrappingAllowedY="true" width="604" tickCounterLabel="ticks" maxPycor="199" updateMode="1" maxPxcor="199" minPxcor="0"></view>
+    <view x="279" wrappingAllowedX="true" y="21" frameRate="30.0" minPycor="0" height="554" showTickCounter="true" patchSize="18.333333333333332" fontSize="10" wrappingAllowedY="true" width="554" tickCounterLabel="ticks" maxPycor="29" updateMode="1" maxPxcor="29" minPxcor="0"></view>
     <button x="15" y="25" height="40" disableUntilTicks="false" forever="false" kind="Observer" width="183">setup</button>
-    <slider x="928" step="0.001" y="157" max="1" width="172" display="seed-percent" height="50" min="0.00001" direction="Horizontal" default="1.0E-5" variable="seed-percent"></slider>
-    <slider x="928" step="1" y="25" max="12" width="172" display="land-cover-classes" height="50" min="1" direction="Horizontal" default="3.0" variable="land-cover-classes"></slider>
+    <slider x="928" step="0.001" y="157" max="1" width="172" display="seed-percent" height="50" min="0.00001" direction="Horizontal" default="0.62301" variable="seed-percent"></slider>
+    <slider x="928" step="1" y="25" max="12" width="172" display="land-cover-classes" height="50" min="1" direction="Horizontal" default="4.0" variable="land-cover-classes"></slider>
     <button x="15" y="77" height="40" disableUntilTicks="false" forever="true" kind="Observer" width="90">go</button>
     <chooser x="928" y="87" height="60" variable="landscape_type" current="1" width="170" display="landscape_type">
       <choice type="string" value="Regular"></choice>
@@ -769,121 +833,332 @@ repeat 2 [ show calculate-mean-free-path ]       ;; run something you want to me
 profiler:stop          ;; stop profiling
 print profiler:report  ;; view the results
 profiler:reset         ;; clear the data</button>
-    <input x="15" multiline="false" y="376" height="60" variable="pol-parameters-file-name" type="string" width="183">pollinator_parameters.csv</input>
+    <input x="15" multiline="false" y="376" height="60" variable="pol-parameters-file-name" type="string" width="183">pollinator_parameters1.csv</input>
     <input x="14" multiline="false" y="523" height="60" variable="nlrx-experiment" type="string" width="184"></input>
     <input x="14" multiline="false" y="449" height="60" variable="plant-parameters-file-name" type="string" width="184">plant_parameters.csv</input>
     <slider x="928" step="10" y="219" max="600" width="172" display="minutes-per-day" height="50" min="480" direction="Horizontal" default="480.0" variable="minutes-per-day"></slider>
   </widgets>
-  <info><![CDATA[## WHAT IS IT?
+  <info><![CDATA[
+# ODD
 
-This model is asscoiated with the paper:
+## 1. Purpose and patterns
 
-Landscape composition and plant-pollinator network structure interact to influence pollination success in an individual-based model
+**Answer:**
 
-The model was developed by Leonardo Saravia and Susanne Kortsch 
+The purpose of the model is to investigate how **landscape spatial structure** and **pollinator foraging behavior** jointly determine plant–pollinator interaction patterns and pollination-related processes. The model explicitly represents individual pollinator movements and local decision-making, allowing the emergence of interaction sequences at fine spatial and temporal scales.
 
------------------------------------------------------------------------------------------
+The model is used to evaluate how variation in:
 
-The model description below follows the ODD (Overview, Design concepts, Details) protocol for describing individual- and agent-based models (Grimm et al. 2006, 2010). The model was implemented in NetLogo (Wilensky, 1999), version 6.0.4.
+* habitat spatial arrangement (controlled by landscape generation parameters),
+* plant resource availability (flower density), and
+* pollinator niche structure and behavior
 
-1. Purpose
+affects:
 
-The main purpose of the model is to understand how the landscape structure influences pollinator visitation rates. By adjusting the arrangements of “habitats” and plants in the landscape, the model serves as a practical tool to mimic the effects of plant intermixing on plant-pollinator interactions. Number of habitats and plants can be adjusted to test different hypotheses. In the Netlogo world, colored grid cells represent different plant types, which are visited by pollinators based on some rules for pollinator movement behavior. Plants with many flowers will be more attractive to pollinators. This variable is also affected by a pollinators’ plant preference, i.e., its diet niche. The pollinators’ visitation rate and plant-pollinator networks will be constructed by recording the pollinators visits to plants. The resulting data that can be analyzed in precisely the same way as conventional field data.
+* visitation rates to plant species,
+* sequences of visits among plant species, and
+* emergent plant–pollinator interaction networks.
 
-## HOW IT WORKS
+Model outputs are designed to reproduce data structures comparable to empirical datasets, such as visitation matrices and interaction networks.
 
-2. Entities, state variables and scales
+---
 
-The model has two types of agents, pollinators and plants. Pollinators are the only mobile agents in the simulation, whereas plants are non-mobile. Pollinators and plants are associated with state variables determining their traits and behaviors. Pollinators are divided into species distinguished by a unique set of traits such as body size, eusociality, foraging distance, and niche (i.e., a subset of plants they interact with) and niche preferences. Plants can have varying numbers of flowers, which will determine their attractiveness to pollinators. The more flowers, the more attractive the plant will be to pollinators will be. 
-There are seven habitats of which six each contain one plant species. A proportion f of patches contains plant species (with a single plant, but flower density can be varied). The remaining proportion of patches (1-f) are empty. Each patch which contains a plant corresponds to a single plant type indicated by a unique color. The world is set to wrap vertically and horizontally.
-The “netlogo world” consists of 1m x 1m grid cells (square patches) and the model landscape comprises 600 x 600 m. 
-
-3. Process overview and scheduling
-
-Time is modelled as discrete steps called ticks in Netlogo. Processes modeled are: 1) movement of pollinators; 2) plants perceived based on attractiveness; 3) visits to plants. 
-
-4. Design concepts
-
-Basic principles 
-
-As currently configured, the model assumes that pollinators can perceive flower density of plants, given that plants are within their niche and perception range. We pre-assigned a fundamental niche to pollinators, i.e., they can interact with a subset of the plant types. To select a plant from its niche, the pollinator checks all plants within its perception range and chooses the one with the most flowers (Benadi and Gaeger 2018), then it moves in a straight line to the chosen plant at a given flight speed (patches per time step). If more than one plant matches this criterion, the pollinator randomly chooses one among them. If no flowers are within a pollinator’s perception range, it continues to move in a correlated random walk until it perceives at least one plant from its niche. 
-Pollinators are associated with different parameters (e.g., flight speed, nest, or no nest) which results in somewhat different movement behaviors, foraging distances and hence in different number of plants visited. Generally, larger-sized pollinators will travel further.
-
-Emergence. — The pollination events emerge from 1) the movement of pollinators 2) flower density, 3) niche and niche preferences of pollinators, and 3) the spatial distribution of plant resources.
- 
-Adaptation. — Pollinators change their foraging behavior in response to clues from their environment, i.e., plant attractiveness. 
-Prediction. — The model does not incorporate any prediction by the agents, i.e., agents do not adjust their behavior to future conditions or consequences of decisions.
-Sensing. — The only sensing that occurs is the sensing of plants by pollinators at each time step. 
-
-Interaction - No direct interaction between agents was incorporated in the model, i.e., agents do not affect each other.  Pollinators may affect each other indirectly (i.e., compete) as plants visited will lose one flower unit and become less attractive to other pollinators.
-
-Stochasticity. — Movement of pollinators follows a correlated random walk with turning angles drawn from a normal distribution with mean (0) and standard deviation (90). The flight speed is not constant but randomly sampled from a Poisson distribution with mean FS at every time step for every pollinator individual. FS are defined based on allometric body size- foraging distance scaling relationships (Kendall et al. accepted). 
-Collectives. — Both the pollinator agents and the plants belong to groups with their own set of traits (sociality, plant densities) which results in different model behaviors, and which will give rise to different plant-pollinator encounter rates and hence pollination events.
-Observation. — Output data are counts of the number of visits by each pollinator to each plant species. These visits reported are saved in a format (e.g., csv file), which can then be imported and analyzed in a statistical program such as R (R Core Team, 2021). 
-
-Details
-
-Initialisation. — Simulations are conducted with randomized plant and pollinator input files 
-
-Input data. — The model does currently not use any external information sources, but this could be included. 
-
-Submodels. — At each timestep (i.e., tick), the following processes occur:
-Move-pollinators: Movement of pollinators, e.g., its foraging range and flight speeds, depends on pollinator perception range and perception angle and other pollinator species’ traits such as its body size, sociality category and plant pollinator preferences. Foraging ranges scale positively with body size according to an allometric function, and also depend on sociality category (Kendall et al. 2022). Per unit body size, foraging ranges are larger an increase at greater rate with sociality. The exact movement details of pollinators are explained thoroughly in the main article text associated with this model.
-
-Count-visits: The Netlogo patches that are classified as plants (i.e., the colored patches) count the number of visits by each pollinator species during each timestep. A visit is recorded when a pollinator is located on top of a grid cell that is classified as a plant. 
-
-Eat: Agents remove one flower unit after each visit but do not gain energy from visiting a plant. NB! This procedure is currently very simple and could be extended in future work by adding sensing of plants (and their rewards, nectar quantity and quality) by pollinators.
-
-Death: As our simulations runs only for one day, pollinators do not die.  
-
-Outputs: The model is configured such that when an individual pollinator visits an individual flower with a given color, the visit is recorded; model output includes the visits made by each pollinator species to each flower species at each tick. An output file (e.g., Visits_10) with all pairwise interactions is saved to a csv file. The resulting plant-pollinator interactions and bipartite networks can be analyses in R or similar statistical programs.
-Furthermore, a csv file with habitat characteristics (size of habitats, number of grid cells with plants in a habitat etc.) is generated.
+## 2. Entities, state variables, and scales
 
 
+### Agents / Individuals
 
-## HOW TO USE IT
+#### Pollinators
 
+Pollinators are mobile agents representing individual foraging insects.
 
-The model needs plant and pollinator input files specifying the parameters of the model.
+State variables include:
 
-Input file names are:
-
-plant_pars_replicate_n
-pol_pars_replicate_n
-
-Inside the model the replictae number of the input files are specfied, e.g., 10.
-In order for the model to read the files, this needs to be reflected in the input file names, e.g.:
- 
-plant_pars_10
-pol_pars_10
+* `niche_list`: list of plant species that the pollinator can visit
+* `current_target`: currently selected plant
+* `found_plant`: indicator of whether a plant has been detected
+* `p_stay`: probability of continuing local foraging
+* spatial position and movement direction
+* movement-related traits (e.g., flight behavior parameters)
 
 
-Setup:
-Sets up the landscape
+#### Plants
 
-Go:
-Starts the simulation
+Plants are stationary agents.
 
-There are three sliders in the model that can be used to change the landscape:
--land-cover-class, determines number of "habitats"
--seed-percent, determines how intermixed the habitats=plants are
--number-of-days, determines how many days the simulation runs. One day contains 600 ticks
+State variables include:
 
-## THINGS TO NOTICE
+* `plant_species`: species identity
+* `flower_density`: number of available floral units
+* `habitat`: habitat type associated with the patch
 
-NOTE! The model setup is very slow. The model landscape size may be decreased to 299*299 grid cells for faster start up under settings in the interface.
+Plants lose one unit of flower density per visit.
 
-## THINGS TO TRY
 
-(suggested things for the user to try to do (move sliders, switches, etc.) with the model)
+### Spatial units
 
-## EXTENDING THE MODEL
+The environment is represented by a grid of square patches.
 
-The model could be extended by inlcuding some population dynamics
+* Each patch has a variable `habitat`
+* Patches may contain a plant or be empty
+* Habitat types correspond to plant species
 
-## NETLOGO FEATURES
 
-(interesting or unusual features of NetLogo that the model uses, particularly in the Code tab; or where workarounds were needed for missing features)
+### Environment
+
+The landscape is a heterogeneous mosaic of habitats generated procedurally.
+Spatial structure is controlled by parameters such as:
+
+* number of habitat types (`land-cover-classes`)
+* degree of spatial aggregation (`seed-percent`)
+
+
+### Scales
+
+* Space: discrete grid of patches (each patch represents 1 m²)
+* Landscape extent: defined by `world-width` (e.g., 600 × 600 patches)
+* Time: discrete time steps (ticks)
+* One simulation day consists of a fixed number of ticks (e.g., 600)
+
+
+
+## 3. Process overview and scheduling
+
+
+
+Time advances in discrete ticks. At each tick, all pollinators execute their behavioral rules.
+
+### Pseudocode
+
+```text
+FOR each tick:
+  ASK pollinators:
+
+    IF no plant is currently targeted:
+        search for plants (movement + detection)
+
+    IF a plant is detected:
+        set current_target
+
+    execute eat:
+
+        IF current_target is invalid:
+            STOP
+
+        visit current_target
+        reduce its flower_density
+
+        define local-plants:
+            plants within radius 1
+            satisfying:
+                - species in niche_list
+                - flower_density > 0
+
+        WHILE (local-plants not empty AND random < p_stay):
+
+            select next-plant randomly
+
+            move to next-plant if needed
+
+            visit next-plant
+
+            remove next-plant from local-plants
+```
+
+### Scheduling details
+
+* Movement, detection, and visitation occur within the same tick
+* Resource depletion (flower removal) occurs immediately after visits
+* Local foraging may result in multiple visits within a single tick
+
+---
+
+## 4. Design concepts
+
+### Basic principles
+
+The model is based on spatially explicit individual-based foraging, where pollinators interact with plants according to:
+
+* spatial proximity,
+* resource availability (flower density), and
+* species-specific interaction constraints (`niche_list`).
+
+Foraging includes both exploratory movement and local exploitation of nearby resources.
+
+
+### Emergence
+
+The following patterns emerge from individual-level processes:
+
+* visitation rates to plant species
+* spatial clustering of visits
+* sequences of plant visits
+* plant–pollinator interaction networks
+
+
+### Adaptation
+
+Pollinators adjust their behavior based on local environmental conditions:
+
+* they restrict interactions to plants within their niche
+* they respond to local availability of floral resources
+* they may continue exploiting local resources depending on `p_stay`
+
+
+### Objectives
+
+Pollinators implicitly maximize local resource use by visiting available plants within their niche and vicinity. No explicit fitness function is implemented.
+
+
+### Learning
+
+No learning or memory updating over time is implemented beyond the immediate local context within a foraging sequence.
+
+
+### Prediction
+
+Pollinators do not predict future conditions; decisions are based solely on current local information.
+
+
+### Sensing
+
+Pollinators can perceive:
+
+* nearby plants within a defined spatial range
+* plant species identity
+* local resource availability (flower density)
+
+
+### Interaction
+
+Interactions include:
+
+* pollinator–plant interactions via visits
+* indirect competition among pollinators through resource depletion
+
+No direct pollinator–pollinator interactions are implemented.
+
+
+### Stochasticity
+
+Stochastic processes include:
+
+* landscape generation (random seed placement)
+* pollinator movement
+* plant selection among available options
+* continuation of local foraging (`p_stay`)
+
+
+### Collectives
+
+Pollinators and plants can be grouped by species or functional traits, but no explicit collective behavior is modeled.
+
+
+### Observation
+
+The model records:
+
+* visits of pollinators to plants (by individual, species, and time step)
+* interaction frequencies between plant and pollinator species
+* landscape characteristics (e.g., habitat distribution)
+
+Outputs are written to external files (e.g., CSV format) for further analysis.
+
+---
+
+## 5. Initialization
+
+
+At the start of each simulation:
+
+### Landscape
+
+* Generated using a seed-based spatial algorithm
+* Habitat types are assigned and expanded across the grid
+* Spatial aggregation depends on `seed-percent`
+
+
+### Plants
+
+* Assigned to patches according to habitat type
+* Each plant is given:
+
+  * a species identity
+  * an initial flower density (> 0)
+
+
+### Pollinators
+
+* Initialized with:
+
+  * a niche (`niche_list`)
+  * behavioral parameters (e.g., `p_stay`)
+  * initial spatial position
+
+
+Initialization is stochastic and varies between simulation runs.
+
+---
+
+## 6. Input data
+
+
+The model uses external csv input files to define parameters, defined in the interface.
+
+These files specify:
+
+* plant species attributes and densities
+* pollinator traits and niche structure
+* simulation parameters for each replicate
+
+The replicate number is set within the model and must match the file names.
+
+---
+
+## 7. Submodels
+
+
+### Landscape generation
+
+* Habitats are initialized using randomly distributed seeds
+* Habitat types expand spatially via local neighborhood propagation
+* This produces clustered spatial patterns
+
+
+### Pollinator movement
+
+* Pollinators move through the landscape via exploratory movement
+* Movement is influenced by perception and behavioral parameters
+
+
+### Plant detection and selection
+
+* Pollinators detect plants within their perception range
+* Only plants within their `niche_list` and with available flowers are considered
+
+
+### Local foraging (exploitation loop)
+
+* After visiting a plant, pollinators may continue visiting nearby plants
+* The continuation of local foraging is controlled by `p_stay`
+* Plants already visited in the local sequence are excluded
+
+
+### Visitation
+
+* A visit occurs when a pollinator occupies a patch containing a plant
+* Each visit reduces `flower_density` by one unit
+
+
+### Output generation
+
+The model produces:
+
+* a CSV file containing visit records (pollinator × plant × time)
+* interaction data suitable for constructing bipartite networks
+* a CSV file with landscape characteristics (e.g., habitat sizes, plant distribution)
+
+
 
 ## RELATED MODELS
 
