@@ -6,13 +6,13 @@ globals [
   region-boundaries   ; a list of regions definitions, where each region is a list of its min pxcor and max pxcor
   habitat-proportions ; a list of habitat proportions produced by the landscape generators
   day                 ; day of the simulation
-  pollinators_number_list     ; list with number of pollinators to setup
+  ;pollinators_number_list     ; list with number of pollinators to setup
+  pollinator_abundance_list
   p_stay;                     ; Probability of pollinators visiting sorrounding plants inside their niche after the plant with max score was visited
 
 ]
 
 breed [pollinators pollinator ]
-breed [observers observer]    ; virtual observer
 breed [plants plant]
 
 plants-own [
@@ -78,7 +78,7 @@ to setup
     ;
     ; To use with nlrx
     ;
-    let file-name (word "Simulations/Visits_" substring date-and-time 16 27 "_" hstime "_run_" nlrx-experiment ".csv")
+    let file-name (word "Simulations/Visits_" substring date-and-time 19 31 "_" hstime "_run_" nlrx-experiment ".csv")
 
     file-open "Simulations/Run_habitat_parameters.csv"
 
@@ -233,6 +233,7 @@ end
 ; procedure to read pollinators parameters from a file
 ;
 to setup-pollinators
+  
   file-close-all ; close all open files
   if not file-exists? pol-parameters-file-name [
     user-message (word "No file " pol-parameters-file-name " exists!")
@@ -244,8 +245,10 @@ to setup-pollinators
   ;  read the header row here to move the cursor down to the next line.
   let headings csv:from-row file-read-line
 
-  set pollinators_number_list [] ; Initialize list of pollinators' numbers
-
+  ;set pollinators_number_list [] ; Initialize list of pollinators' numbers
+  let seen-species []      ; To check duplicated species number
+  set pollinator_abundance_list [] 
+  
   ; We'll read all the data in a single loop
   while [ not file-at-end? ] [
 
@@ -253,13 +256,22 @@ to setup-pollinators
     let pollinator_data csv:from-row file-read-line
 
     ;print pollinator_data
+    let sp item 0 pollinator_data
 
+    if member? sp seen-species [
+      print (word "ERROR: duplicated pollinator species found: " sp)
+      stop
+    ]
+
+    set seen-species lput sp seen-species
+    
     ; we add number-of-pollinators for each pollinator in the file
     ;
     create-pollinators 1 [
       setxy random-pxcor random-pycor
-      set species        item 0 pollinator_data
-      set pollinators_number_list lput item 1 pollinator_data pollinators_number_list
+      set species        sp
+      ;;set pollinators_number_list lput item 1 pollinator_data pollinators_number_list
+      set pollinator_abundance_list lput (list sp item 1 pollinator_data) pollinator_abundance_list
       set eusocial       item 2 pollinator_data         ; 0= None, 1=solitary, 2=full
       set flight_speed   item 3 pollinator_data         ; if body_mass > 0 then it is calcualted from Liam's model
       set stdev_angle    item 4 pollinator_data
@@ -298,14 +310,18 @@ to setup-pollinators
   file-close ; make sure to close the file
 
   ask pollinators [
-
-    hatch (item (species - 1) pollinators_number_list) - 1
+    let n get-abundance species
+    hatch (n - 1)
   ]
 
   eusociality-setup
 
-  print word "pollinators_number_list: " pollinators_number_list
+  print word "pollinators_number_list: " pollinator_abundance_list
 
+end
+
+to-report get-abundance [sp]
+  report last first filter [pair -> first pair = sp] pollinator-abundance-list
 end
 
 to body-mass-dependent-distance
@@ -661,7 +677,7 @@ to eat
 
     visit-plant next-plant
 
-    ;; 🔥 SOLO actualizar lista, no patches
+    ;; SOLO actualizar lista, no patches
     set local-plants local-plants with [self != next-plant]
 
   ]
@@ -808,14 +824,25 @@ to-report calculate-distance-plants
   ]
 
   report results
+end
+
+to-report calculate-pollinators-by-sp
+  
+  let species-list sort remove-duplicates [species] of pollinators
+  
+  let abundance-table map [ sp ->
+    (list sp (count pollinators with [species = sp]))
+  ] species-list
+  
+  report abundance-table
 end]]></code>
   <widgets>
-    <view x="279" wrappingAllowedX="true" y="21" frameRate="30.0" minPycor="0" height="554" showTickCounter="true" patchSize="18.333333333333332" fontSize="10" wrappingAllowedY="true" width="554" tickCounterLabel="ticks" maxPycor="29" updateMode="1" maxPxcor="29" minPxcor="0"></view>
+    <view x="279" wrappingAllowedX="true" y="21" frameRate="30.0" minPycor="0" height="602" showTickCounter="true" patchSize="6.0" fontSize="10" wrappingAllowedY="true" width="602" tickCounterLabel="ticks" maxPycor="99" updateMode="1" maxPxcor="99" minPxcor="0"></view>
     <button x="15" y="25" height="40" disableUntilTicks="false" forever="false" kind="Observer" width="183">setup</button>
     <slider x="928" step="0.001" y="157" max="1" width="172" display="seed-percent" height="50" min="0.00001" direction="Horizontal" default="0.62301" variable="seed-percent"></slider>
     <slider x="928" step="1" y="25" max="12" width="172" display="land-cover-classes" height="50" min="1" direction="Horizontal" default="4.0" variable="land-cover-classes"></slider>
     <button x="15" y="77" height="40" disableUntilTicks="false" forever="true" kind="Observer" width="90">go</button>
-    <chooser x="928" y="87" height="60" variable="landscape_type" current="1" width="170" display="landscape_type">
+    <chooser x="928" y="87" height="60" variable="landscape_type" current="0" width="170" display="landscape_type">
       <choice type="string" value="Regular"></choice>
       <choice type="string" value="Random natural"></choice>
       <choice type="string" value="Image"></choice>
@@ -833,7 +860,7 @@ repeat 2 [ show calculate-mean-free-path ]       ;; run something you want to me
 profiler:stop          ;; stop profiling
 print profiler:report  ;; view the results
 profiler:reset         ;; clear the data</button>
-    <input x="15" multiline="false" y="376" height="60" variable="pol-parameters-file-name" type="string" width="183">pollinator_parameters1.csv</input>
+    <input x="15" multiline="false" y="376" height="60" variable="pol-parameters-file-name" type="string" width="183">pollinator_parameters.csv</input>
     <input x="14" multiline="false" y="523" height="60" variable="nlrx-experiment" type="string" width="184"></input>
     <input x="14" multiline="false" y="449" height="60" variable="plant-parameters-file-name" type="string" width="184">plant_parameters.csv</input>
     <slider x="928" step="10" y="219" max="600" width="172" display="minutes-per-day" height="50" min="480" direction="Horizontal" default="480.0" variable="minutes-per-day"></slider>
@@ -1098,22 +1125,170 @@ At the start of each simulation:
 
 Initialization is stochastic and varies between simulation runs.
 
----
+
+
+
+
 
 ## 6. Input data
 
 
-The model uses external csv input files to define parameters, defined in the interface.
-
-These files specify:
-
-* plant species attributes and densities
-* pollinator traits and niche structure
-* simulation parameters for each replicate
-
-The replicate number is set within the model and must match the file names.
+The model requires two external parameter files to define plant and pollinator traits. These files are mandatory for running the model and must be provided for each simulation replicate.
 
 ---
+
+### File structure and naming
+
+Two input files are required
+
+
+# Plant parameter file (`plant_parameters.csv`)
+
+This file defines plant species traits and their distribution across habitats.
+
+## Column format
+
+Each row corresponds to a **plant species**.
+
+1. **`plant_species`** *(integer)*
+   Unique identifier of the plant species.
+
+2. **`habitat`** *(list of integers)*
+   List of habitat IDs where the species can occur.
+   Example: `[1 2 3]`
+
+3. **`habitat_density`** *(list of numeric values)*
+   Relative density of the species in each habitat listed in `habitat`.
+   Values correspond positionally to the habitat list.
+   Example: `[0.1 0.01 0.01]`
+
+4. **`flowers_min`** *(integer)*
+   Minimum number of flowers per plant.
+
+5. **`flowers_max`** *(integer)*
+   Maximum number of flowers per plant.
+
+---
+
+## Example
+
+```csv
+plant_species,habitat,habitat_density,flowers_min,flowers_max
+1,[1 2 3],[0.1 0.01 0.01],4,16
+2,[1 2 3],[0.01 0.1 0.01],4,16
+3,[1 2 3],[0.01 0.01 0.01],4,16
+```
+
+---
+
+## Interpretation
+
+* Species can occur in **multiple habitats**
+* `habitat_density` defines **relative abundance per habitat**
+* Flower density is **initialized randomly** between `flowers_min` and `flowers_max`
+
+---
+
+# Pollinator parameter file (`pollinator_parameters.csv`)
+
+This file defines pollinator individuals and their traits.
+
+## Column format
+
+Each row corresponds to a **pollinator individual** (not just species).
+
+1. **`species`** *(integer)*
+   Pollinator species identity.
+
+2. **`number`** *(integer)*
+   Number of individuals of this type (may be used for replication or weighting).
+
+3. **`eusocial`** *(integer)*
+   Sociality status:
+
+   * 0 = solitary no nest
+   * 1 = solitary with nest
+   * 2 = primitively eusocial
+   * 3 = highly eusocial
+
+4. **`nest`** *(binary or integer)*
+   Indicates whether the pollinator has a nest (affects movement behavior).
+
+5. **`niche_list`** *(list of integers)*
+   Plant species that the pollinator can visit.
+   Example: `[1 3 5]`
+
+6. **`perception_range`** *(numeric)*
+   Distance within which plants can be detected.
+
+7. **`perception_angle`** *(numeric)*
+   Angular field of perception.
+
+8. **`flight_speed_mean`** *(numeric)*
+   Mean movement speed.
+
+9. **`flight_speed_sd`** *(numeric)*
+   Standard deviation of movement speed.
+
+10. **`turning_angle_sd`** *(numeric)*
+    Standard deviation of turning angles (correlated random walk).
+
+11. **`body_mass`** *(numeric)*
+    Body size of the pollinator.
+
+12. **`turtle_size`** *(numeric)*
+    Visualization parameter in NetLogo.
+
+13. **`turtle_color`** *(integer)*
+    Visualization parameter.
+
+---
+
+## Example
+
+```csv
+species,number,eusocial,nest,niche_list,perception_range,perception_angle,flight_speed_mean,flight_speed_sd,turning_angle_sd,body_mass,turtle_size,turtle_color
+1,1,0,0,[1 2 3],10,180,2.5,1.0,90,4.955,4,5
+2,1,0,0,[2 4],10,180,2.0,1.0,90,4.619,4,15
+3,1,1,1,[1 3 5],15,180,3.0,1.2,90,7.021,4,25
+```
+
+---
+
+
+# Data structure and consistency
+
+* `plant_species` (plants) must match values in `niche_list` (pollinators)
+* Habitat IDs must match those generated in the landscape
+* List variables (e.g., `[1 2 3]`) must be parsed into NetLogo lists
+
+---
+
+# Role in the model
+
+These parameter files define:
+
+* **Plant distribution across habitats**
+* **Resource availability (flower ranges)**
+* **Pollinator traits and movement behavior**
+* **Interaction network structure (via `niche_list`)**
+
+They are therefore central to:
+
+* determining which interactions are possible
+* shaping spatial resource heterogeneity
+* controlling behavioral variability among pollinators
+
+---
+
+# Output linkage
+
+All identifiers defined in these files are preserved in the model outputs, allowing:
+
+* reconstruction of interaction networks
+* linkage between visits and species traits
+* reproducible simulation experiments
+
 
 ## 7. Submodels
 
